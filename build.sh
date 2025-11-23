@@ -1,0 +1,1 @@
+g++ Loong.cpp Library.cpp Lexer.cpp Interpreter.cpp Variable.cpp Token.cpp CallStack.cpp Parser.cpp AST.cpp GlobalData.cpp Sal.cpp -o loong -ldl  -lpthread

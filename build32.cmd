@@ -1,0 +1,2 @@
+g++ Loong.cpp AST.cpp CallStack.cpp GlobalData.cpp Interpreter.cpp Lexer.cpp Library.cpp Parser.cpp Sal.cpp TimeBomb.cpp Token.cpp Variable.cpp -Iinclude -Os -std=c++11 -static-libgcc -static-libstdc++ -o loong32 -lkernel32 -lws2_32
+strip loong32.exe
