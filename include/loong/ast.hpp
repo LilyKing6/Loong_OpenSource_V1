@@ -3,21 +3,21 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <memory>
 #include "token.hpp"
 #include "variable.hpp"
 
 namespace loong {
 
-// base class for all AST nodes
 class AstNode
 {
 public:
-// discriminated type for AST node dispatch
-    enum class AstNodeType
+    enum class Type
     {
         Empty,
         None,
         BinOp,
+        UnaryOp,
         Num,
         Bool,
         Str,
@@ -28,61 +28,68 @@ public:
         Include,
         Import,
         Program,
+        ProgramBlock,
         Block,
-        Compound,
-        IfCompound,
-        WhileCompound,
-        ForCompound,
+        If,
+        While,
+        For,
         Break,
         Return,
         Continue,
         Builtin,
-        Function,
-        Class,
-        FunctionExec,
-        Member,
+        FuncDecl,
+        ClassDecl,
+        FuncCall,
+        MemberAccess,
         Global
     };
 
     AstNode();
     virtual ~AstNode();
 
-    [[nodiscard]] AstNodeType type() const { return m_type; }
+    [[nodiscard]] Type type() const { return m_type; }
+    [[nodiscard]] const Token& token() const { return m_token; }
     [[nodiscard]] Token& token() { return m_token; }
 
 protected:
-    AstNodeType m_type;
+    Type m_type;
     Token m_token;
 };
 
-// placeholder for empty statements
 class NoOp : public AstNode
 {
 public:
-    NoOp() { m_type = AstNodeType::Empty; }
+    NoOp() { m_type = Type::Empty; }
 };
 
-// null/none literal
 class NoneNode : public AstNode
 {
 public:
-    NoneNode() { m_type = AstNodeType::None; }
+    NoneNode() { m_type = Type::None; }
 };
 
-// binary operation (arithmetic, comparison, logical, bitwise)
 class BinOp : public AstNode
 {
 public:
     BinOp(AstNode* left, const Token& op, AstNode* right);
-    [[nodiscard]] AstNode* left() { return m_left; }
-    [[nodiscard]] AstNode* right() { return m_right; }
+    [[nodiscard]] AstNode* left() const { return m_left; }
+    [[nodiscard]] AstNode* right() const { return m_right; }
 
 private:
     AstNode* m_left;
     AstNode* m_right;
 };
 
-// numeric literal (int or float)
+class UnaryOp : public AstNode
+{
+public:
+    UnaryOp(const Token& op, AstNode* operand);
+    [[nodiscard]] AstNode* operand() const { return m_operand; }
+
+private:
+    AstNode* m_operand;
+};
+
 class NumLiteral : public AstNode
 {
 public:
@@ -100,7 +107,6 @@ private:
     double m_floatValue;
 };
 
-// boolean literal
 class BoolLiteral : public AstNode
 {
 public:
@@ -111,23 +117,21 @@ private:
     bool m_value;
 };
 
-// string literal
 class StrLiteral : public AstNode
 {
 public:
-    StrLiteral(const Token& token) { m_type = AstNodeType::Str; m_token = token; m_value = m_token.value(); }
-    [[nodiscard]] std::string& value() { return m_value; }
+    explicit StrLiteral(const Token& token);
+    [[nodiscard]] const std::string& value() const { return m_value; }
 
 private:
     std::string m_value;
 };
 
-// array constructor with optional size and initializers
 class ArrayLiteral : public AstNode
 {
 public:
     ArrayLiteral(const Token& token, AstNode* arraySize);
-    [[nodiscard]] AstNode* arraySize() { return m_arraySize; }
+    [[nodiscard]] AstNode* arraySize() const { return m_arraySize; }
     [[nodiscard]] std::vector<AstNode*>& initializers() { return m_initializers; }
 
 private:
@@ -135,11 +139,10 @@ private:
     std::vector<AstNode*> m_initializers;
 };
 
-// dictionary constructor with key-value pairs
 class DictLiteral : public AstNode
 {
 public:
-    DictLiteral(const Token& token);
+    explicit DictLiteral(const Token& token);
     [[nodiscard]] std::vector<AstNode*>& leftInitializers() { return m_leftInits; }
     [[nodiscard]] std::vector<AstNode*>& rightInitializers() { return m_rightInits; }
 
@@ -148,100 +151,90 @@ private:
     std::vector<AstNode*> m_rightInits;
 };
 
-// variable reference, optionally with subscript expressions
 class VarRef : public AstNode
 {
 public:
-    VarRef(const Token& token);
-    [[nodiscard]] std::string& value() { return m_value; }
+    explicit VarRef(const Token& token);
+    [[nodiscard]] const std::string& value() const { return m_value; }
+    std::string& value() { return m_value; }
     void setGlobal(bool global) { m_global = global; }
-    [[nodiscard]] bool isGlobal() { return m_global; }
+    [[nodiscard]] bool isGlobal() const { return m_global; }
     [[nodiscard]] std::vector<AstNode*>& exprs() { return m_exprs; }
     void setFunc(bool func) { m_func = func; }
-    [[nodiscard]] bool isFunc() { return m_func; }
+    [[nodiscard]] bool isFunc() const { return m_func; }
 
 private:
     std::string m_value;
-    bool m_global;
+    bool m_global = false;
     std::vector<AstNode*> m_exprs;
-    bool m_func;
+    bool m_func = false;
 };
 
-// assignment expression (left op right)
 class AssignExpr : public AstNode
 {
 public:
     AssignExpr(AstNode* left, const Token& op, AstNode* right);
-    [[nodiscard]] AstNode* left() { return m_left; }
-    [[nodiscard]] AstNode* right() { return m_right; }
+    [[nodiscard]] AstNode* left() const { return m_left; }
+    [[nodiscard]] AstNode* right() const { return m_right; }
 
 private:
     AstNode* m_left;
     AstNode* m_right;
 };
 
-// class definition with constructor params and body
-class ClassDecl : public AstNode
+class CallableDecl : public AstNode
+{
+public:
+    [[nodiscard]] const std::string& name() const { return m_name; }
+    [[nodiscard]] std::vector<std::string>& params() { return m_params; }
+    [[nodiscard]] std::vector<AstNode*>& paramsValue() { return m_paramsValue; }
+    [[nodiscard]] std::vector<AstNode*>& statements() { return m_statements; }
+
+protected:
+    CallableDecl(Type nodeType, std::string name, const Token& token);
+    std::string m_name;
+    std::vector<std::string> m_params;
+    std::vector<AstNode*> m_paramsValue;
+    std::vector<AstNode*> m_statements;
+};
+
+class ClassDecl : public CallableDecl
 {
 public:
     ClassDecl(std::string name, const Token& token);
-    [[nodiscard]] std::vector<std::string>& params() { return m_params; }
-    [[nodiscard]] std::vector<AstNode*>& paramsValue() { return m_paramsValue; }
-    [[nodiscard]] std::vector<AstNode*>& statements() { return m_statements; }
-    [[nodiscard]] std::string name() const { return m_name; }
-
-private:
-    std::string m_name;
-    std::vector<std::string> m_params;
-    std::vector<AstNode*> m_paramsValue;
-    std::vector<AstNode*> m_statements;
 };
 
-// function definition with parameters and body
-class FuncDecl : public AstNode
+class FuncDecl : public CallableDecl
 {
 public:
     FuncDecl(std::string name, const Token& token);
-    [[nodiscard]] std::vector<std::string>& params() { return m_params; }
-    [[nodiscard]] std::vector<AstNode*>& paramsValue() { return m_paramsValue; }
-    [[nodiscard]] std::vector<AstNode*>& statements() { return m_statements; }
-    [[nodiscard]] std::string name() const { return m_name; }
-
-private:
-    std::string m_name;
-    std::vector<std::string> m_params;
-    std::vector<AstNode*> m_paramsValue;
-    std::vector<AstNode*> m_statements;
 };
 
-// function call with argument expressions
 class FuncCall : public AstNode
 {
 public:
     FuncCall(AstNode* statement, const Token& token);
-    [[nodiscard]] AstNode* funcDecl() { return m_statement; }
+    [[nodiscard]] AstNode* funcDecl() const { return m_statement; }
     [[nodiscard]] std::vector<AstNode*>& exprs() { return m_exprs; }
-    [[nodiscard]] bool isVar() { return m_var; }
+    [[nodiscard]] bool isVar() const { return m_var; }
     void setVar(bool var) { m_var = var; }
 
 private:
     AstNode* m_statement;
     std::vector<AstNode*> m_exprs;
-    bool m_var;
+    bool m_var = false;
 };
 
-// built-in function call (print, typeof, etc.)
 class BuiltinCall : public AstNode
 {
 public:
-    BuiltinCall(const Token& token);
+    explicit BuiltinCall(const Token& token);
     [[nodiscard]] std::vector<AstNode*>& exprs() { return m_exprs; }
 
 private:
     std::vector<AstNode*> m_exprs;
 };
 
-// member access via dot operator (obj.member)
 class MemberAccess : public AstNode
 {
 public:
@@ -249,59 +242,54 @@ public:
 
     MemberAccess(const Token& token, MemberType memtype = MemberType::Fun);
     [[nodiscard]] std::vector<AstNode*>& exprs() { return m_exprs; }
-    [[nodiscard]] MemberType memberType() { return m_memType; }
+    [[nodiscard]] MemberType memberType() const { return m_memType; }
 
 private:
     MemberType m_memType;
     std::vector<AstNode*> m_exprs;
 };
 
-// break statement for loop exit
 class BreakStmt : public AstNode
 {
 public:
-    BreakStmt(const Token& token) { m_type = AstNodeType::Break; m_token = token; }
+    explicit BreakStmt(const Token& token) { m_type = Type::Break; m_token = token; }
 };
 
-// continue statement for loop iteration skip
 class ContinueStmt : public AstNode
 {
 public:
-    ContinueStmt(const Token& token) { m_type = AstNodeType::Continue; m_token = token; }
+    explicit ContinueStmt(const Token& token) { m_type = Type::Continue; m_token = token; }
 };
 
-// return statement with optional expression
 class ReturnStmt : public AstNode
 {
 public:
     ReturnStmt(const Token& token, AstNode* expr);
-    [[nodiscard]] AstNode* expr() { return m_expr; }
+    [[nodiscard]] AstNode* expr() const { return m_expr; }
 
 private:
     AstNode* m_expr;
 };
 
-// while loop with condition and body
 class WhileStmt : public AstNode
 {
 public:
     WhileStmt(const Token& token, AstNode* expr);
     [[nodiscard]] std::vector<AstNode*>& statements() { return m_statements; }
-    [[nodiscard]] AstNode* expr() { return m_expr; }
+    [[nodiscard]] AstNode* expr() const { return m_expr; }
 
 private:
     AstNode* m_expr;
     std::vector<AstNode*> m_statements;
 };
 
-// for loop with init, condition, update, and body
 class ForStmt : public AstNode
 {
 public:
     ForStmt(const Token& token, const std::vector<AstNode*>& init, AstNode* expr, const std::vector<AstNode*>& update);
     [[nodiscard]] std::vector<AstNode*>& statements() { return m_statements; }
     [[nodiscard]] std::vector<AstNode*>& initStatements() { return m_init; }
-    [[nodiscard]] AstNode* expr() { return m_expr; }
+    [[nodiscard]] AstNode* expr() const { return m_expr; }
     [[nodiscard]] std::vector<AstNode*>& updateStatements() { return m_update; }
 
 private:
@@ -311,14 +299,13 @@ private:
     std::vector<AstNode*> m_statements;
 };
 
-// if/else conditional with true and false branches
 class IfStmt : public AstNode
 {
 public:
     IfStmt(const Token& token, AstNode* expr);
     [[nodiscard]] std::vector<AstNode*>& trueBranch() { return m_trueBranch; }
     [[nodiscard]] std::vector<AstNode*>& falseBranch() { return m_falseBranch; }
-    [[nodiscard]] AstNode* expr() { return m_expr; }
+    [[nodiscard]] AstNode* expr() const { return m_expr; }
 
 private:
     AstNode* m_expr;
@@ -336,12 +323,11 @@ private:
     std::vector<AstNode*> m_children;
 };
 
-// top-level program block wrapping globals + compound
 class ProgramBlock : public AstNode
 {
 public:
-    ProgramBlock(Block* compound);
-    [[nodiscard]] Block* compound() { return m_compound; }
+    explicit ProgramBlock(Block* compound);
+    [[nodiscard]] Block* compound() const { return m_compound; }
 
 private:
     Block* m_compound;
@@ -351,8 +337,8 @@ class Program : public AstNode
 {
 public:
     Program(std::string name, ProgramBlock* block);
-    [[nodiscard]] std::string name() const { return m_name; }
-    [[nodiscard]] ProgramBlock* block() { return m_block; }
+    [[nodiscard]] const std::string& name() const { return m_name; }
+    [[nodiscard]] ProgramBlock* block() const { return m_block; }
     [[nodiscard]] std::vector<AstNode*>& globals() { return m_globalVars; }
     [[nodiscard]] std::vector<std::string>& params() { return m_params; }
 
@@ -363,33 +349,30 @@ private:
     std::vector<AstNode*> m_globalVars;
 };
 
-// include directive for importing source files
 class IncludeStmt : public AstNode
 {
 public:
-    IncludeStmt(const Token& token) { m_type = AstNodeType::Include; m_token = token; }
+    explicit IncludeStmt(const Token& token) { m_type = Type::Include; m_token = token; }
     [[nodiscard]] std::vector<AstNode*>& globals() { return m_globalVars; }
 
 private:
     std::vector<AstNode*> m_globalVars;
 };
 
-// import directive for loading libraries
 class ImportStmt : public AstNode
 {
 public:
-    ImportStmt(const Token& token) { m_type = AstNodeType::Import; m_token = token; }
+    explicit ImportStmt(const Token& token) { m_type = Type::Import; m_token = token; }
     [[nodiscard]] std::vector<AstNode*>& globals() { return m_globalVars; }
 
 private:
     std::vector<AstNode*> m_globalVars;
 };
 
-// global variable declaration
 class GlobalStmt : public AstNode
 {
 public:
-    GlobalStmt(const Token& token) { m_type = AstNodeType::Global; m_token = token; }
+    explicit GlobalStmt(const Token& token) { m_type = Type::Global; m_token = token; }
     [[nodiscard]] std::map<std::string, bool>& vars() { return m_vars; }
 
 private:

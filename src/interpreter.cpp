@@ -84,11 +84,11 @@ void Interpreter::error(const string& err, const Token& token)
 void Interpreter::visit(AstNode* node, Variable& res)
 {
 	res.reset();
-	if (node == nullptr || node->type() == AstNode::AstNodeType::Empty || m_error.size() > 0)
+	if (node == nullptr || node->type() == AstNode::Type::Empty || m_error.size() > 0)
 		return;
 
 	auto type = node->type();
-	if (type == AstNode::AstNodeType::BinOp)
+	if (type == AstNode::Type::BinOp)
 	{
 		visitBinOp((BinOp*)node, res);
 		if(res.tag() == Variable::TagType::DivZeroError && res.type() == Variable::VarType::None)
@@ -100,91 +100,91 @@ void Interpreter::visit(AstNode* node, Variable& res)
 			error("unsupported operand type", node->token());
 		}	
 	}
-	else if (type == AstNode::AstNodeType::Num)
+	else if (type == AstNode::Type::Num)
 	{
 		visitNum((NumLiteral*)node, res);
 	}
-	else if (type == AstNode::AstNodeType::Bool)
+	else if (type == AstNode::Type::Bool)
 	{
 		visitBool((BoolLiteral*)node, res);
 	}
-	else if (type == AstNode::AstNodeType::Str)
+	else if (type == AstNode::Type::Str)
 	{
 		visitStr((StrLiteral*)node, res);
 	}
-	else if (type == AstNode::AstNodeType::Array)
+	else if (type == AstNode::Type::Array)
 	{
 		visitArray((ArrayLiteral*)node, res);
 	}
-	else if (type == AstNode::AstNodeType::Dict)
+	else if (type == AstNode::Type::Dict)
 	{
 		visitDict((DictLiteral*)node, res);
 	}
-	else if (type == AstNode::AstNodeType::Var)
+	else if (type == AstNode::Type::Var)
 	{
 		visitVar((VarRef*)node, res);
 	}
-	else if (type == AstNode::AstNodeType::Assign)
+	else if (type == AstNode::Type::Assign)
 	{
 		visitAssign((AssignExpr*)node, res);
 	}
-	else if (type == AstNode::AstNodeType::Program)
+	else if (type == AstNode::Type::Program)
 	{
 		visitProgram((Program*)node, res);
 	}
-	else if (type == AstNode::AstNodeType::Block)
+	else if (type == AstNode::Type::ProgramBlock)
 	{
 		visitProgramBlock((ProgramBlock*)node, res);
 	}
-	else if (type == AstNode::AstNodeType::Compound)
+	else if (type == AstNode::Type::Block)
 	{
 		visitBlock((Block*)node, res);
 	}
-	else if (type == AstNode::AstNodeType::IfCompound)
+	else if (type == AstNode::Type::If)
 	{
 		visitIfStmt((IfStmt*)node, res);
 	}
-	else if (type == AstNode::AstNodeType::WhileCompound)
+	else if (type == AstNode::Type::While)
 	{
 		visitWhileStmt((WhileStmt*)node, res);
 	}
-	else if (type == AstNode::AstNodeType::ForCompound)
+	else if (type == AstNode::Type::For)
 	{
 		visitForStmt((ForStmt*)node, res);
 	}
-	else if (type == AstNode::AstNodeType::Break)
+	else if (type == AstNode::Type::Break)
 	{
 		visitBreak((BreakStmt*)node, res);
 	}
-	else if (type == AstNode::AstNodeType::Continue)
+	else if (type == AstNode::Type::Continue)
 	{
 		visitContinue((ContinueStmt*)node, res);
 	}
-	else if (type == AstNode::AstNodeType::Return)
+	else if (type == AstNode::Type::Return)
 	{
 		visitReturn((ReturnStmt*)node, res);
 	}
-	else if (type == AstNode::AstNodeType::Builtin)
+	else if (type == AstNode::Type::Builtin)
 	{
 		visitBuiltin((BuiltinCall*)node, res);
 	}
-	else if (type == AstNode::AstNodeType::Function)
+	else if (type == AstNode::Type::FuncDecl)
 	{
 		visitFunction((FuncDecl*)node, res);
 	}
-	else if (type == AstNode::AstNodeType::FunctionExec)
+	else if (type == AstNode::Type::FuncCall)
 	{
 		visitFunctionExec((FuncCall*)node, res);
 	}
-	else if (type == AstNode::AstNodeType::Include)
+	else if (type == AstNode::Type::Include)
 	{
 		visitInclude((IncludeStmt*)node, res);
 	}
-	else if (type == AstNode::AstNodeType::Import)
+	else if (type == AstNode::Type::Import)
 	{
 		visitImport((ImportStmt*)node, res);
 	}
-	else if (type == AstNode::AstNodeType::None)
+	else if (type == AstNode::Type::None)
 	{
 		res.setType(Variable::VarType::None);
 	}
@@ -566,7 +566,7 @@ void Interpreter::visitVar(VarRef* node, Variable& var_value)
 }
 void Interpreter::visitAssign(AssignExpr* node, Variable& res)
 {
-	if (node->left()->type()!=AstNode::AstNodeType::Var)
+	if (node->left()->type()!=AstNode::Type::Var)
 	{
 		Variable var_value;
 		visit(node->left(),var_value);
@@ -702,7 +702,7 @@ void Interpreter::visitProgram(Program* node, Variable& res)
 	m_callStack.push(ar);
 	for (size_t i = 0; i<node->globals().size(); i++)
 	{
-		if(node->globals()[i]->type()==AstNode::AstNodeType::Assign)
+		if(node->globals()[i]->type()==AstNode::Type::Assign)
 			visit(node->globals()[i],res);
 	}
 	visit(node->block(),res);
@@ -866,7 +866,7 @@ void Interpreter::visitInclude(IncludeStmt* node, Variable& res)
 {
 	for (size_t i = 0; i<node->globals().size(); i++)
 	{
-		if (node->globals()[i]->type() == AstNode::AstNodeType::Assign)
+		if (node->globals()[i]->type() == AstNode::Type::Assign)
 			visit(node->globals()[i],res);
 	}
 	return res.reset();
@@ -875,7 +875,7 @@ void Interpreter::visitImport(ImportStmt* node, Variable& res)
 {
 	for (size_t i = 0; i<node->globals().size(); i++)
 	{
-		if (node->globals()[i]->type() == AstNode::AstNodeType::Assign)
+		if (node->globals()[i]->type() == AstNode::Type::Assign)
 			visit(node->globals()[i],res);
 	}
 	return res.reset();
@@ -890,7 +890,7 @@ void Interpreter::visitBuiltin(BuiltinCall* node, Variable& res)
 			Variable &result=res;
 			visit(exprs[i], result);
 			if (result.type() == Variable::VarType::Int)
-				formattedPrint("lld ", result.intValue());
+				formattedPrint("%lld ", result.intValue());
 			else if (result.type() == Variable::VarType::Float)
 				formattedPrint("%f ", result.floatValue());
 			else if (result.type() == Variable::VarType::String)
@@ -1282,13 +1282,13 @@ void Interpreter::visitFunctionExec(FuncCall* node, Variable& res)
 		var.setType(Variable::VarType::Pointer);
 		var.setPointer(node->funcDecl());
 		var.info()["func_type"] = "func";
-		if (node->funcDecl()->type() == AstNode::AstNodeType::Class)
+		if (node->funcDecl()->type() == AstNode::Type::ClassDecl)
 			var.info()["func_type"] = "class";
 
 		return;
 	}
 
-	if (node->funcDecl()->type() == AstNode::AstNodeType::Class)
+	if (node->funcDecl()->type() == AstNode::Type::ClassDecl)
 		return visitClass(node,res);
 
 	FuncDecl* fun = (FuncDecl*)node->funcDecl();
@@ -1297,7 +1297,7 @@ void Interpreter::visitFunctionExec(FuncCall* node, Variable& res)
 
 void Interpreter::execFunction(FuncDecl* fun, vector<AstNode*>& exprs, Token& token, Variable& res)
 {
-	if (fun->type() == AstNode::AstNodeType::Empty)
+	if (fun->type() == AstNode::Type::Empty)
 		return res.reset();
 
 	Variable &result = res;
@@ -1745,7 +1745,7 @@ void Interpreter::printObject(Variable& object)
 			{
 				Variable& result = (*object.arrayValue())[i];
 				if (result.type() == Variable::VarType::Int)
-					formattedPrint("lld ", result.intValue());
+					formattedPrint("%lld ", result.intValue());
 				else if (result.type() == Variable::VarType::Float)
 					formattedPrint("%f ", result.floatValue());
 				else if (result.type() == Variable::VarType::String)
@@ -1786,7 +1786,7 @@ void Interpreter::printObject(Variable& object)
 		{
 			const Variable& result = iter->first;
 			if (result.type() == Variable::VarType::Int)
-				formattedPrint("lld ", result.intValue());
+				formattedPrint("%lld ", result.intValue());
 			else if (result.type() == Variable::VarType::Float)
 				formattedPrint("%f ", result.floatValue());
 			else if (result.type() == Variable::VarType::String)
@@ -1834,7 +1834,7 @@ void Interpreter::printObject(Variable& object)
 			{
 				Variable& result2 = iter->second;
 				if (result2.type() == Variable::VarType::Int)
-					formattedPrint("lld ", result2.intValue());
+					formattedPrint("%lld ", result2.intValue());
 				else if (result2.type() == Variable::VarType::Float)
 					formattedPrint("%f ", result2.floatValue());
 				else if (result2.type() == Variable::VarType::String)

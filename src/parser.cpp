@@ -230,13 +230,13 @@ void Parser::parseContent(const string& content, vector<AstNode*>& globals, stri
 		else if (parser.m_currentToken.type() == TokenKind::Id)
 		{
 			node = parser.expr();
-			if (node->type() != AstNode::AstNodeType::Assign)
+			if (node->type() != AstNode::Type::Assign)
 			{
 				parser.error("error assign");
 				break;
 			}
 			VarRef* var = (VarRef*)((AssignExpr*)node)->left();
-			if (var->type() != AstNode::AstNodeType::Var)
+			if (var->type() != AstNode::Type::Var)
 			{
 				error("error variable");
 				break;
@@ -256,13 +256,13 @@ void Parser::parseContent(const string& content, vector<AstNode*>& globals, stri
 			else
 			{
 				node = parser.expr();
-				if (node->type() != AstNode::AstNodeType::Assign)
+				if (node->type() != AstNode::Type::Assign)
 				{
 					parser.error("error assign");
 					break;
 				}
 				VarRef* var = (VarRef*)((AssignExpr*)node)->left();
-				if (var->type() != AstNode::AstNodeType::Var)
+				if (var->type() != AstNode::Type::Var)
 				{
 					error("error variable");
 					break;
@@ -548,13 +548,13 @@ AstNode* Parser::program()
 		else if(m_currentToken.type() == TokenKind::Id)
 		{
 			node = expr();
-			if (node->type() != AstNode::AstNodeType::Assign)
+			if (node->type() != AstNode::Type::Assign)
 			{
 				error("error defination");
 				break;
 			}
 			VarRef* var=(VarRef*)((AssignExpr*)node)->left();
-			if (var->type()!=AstNode::AstNodeType::Var)
+			if (var->type()!=AstNode::Type::Var)
 			{
 				error("error variable");
 				break;
@@ -574,13 +574,13 @@ AstNode* Parser::program()
 			else
 			{
 				node = expr();
-				if (node->type() != AstNode::AstNodeType::Assign)
+				if (node->type() != AstNode::Type::Assign)
 				{
 					error("error defination");
 					break;
 				}
 				VarRef* var = (VarRef*)((AssignExpr*)node)->left();
-				if (var->type() != AstNode::AstNodeType::Var)
+				if (var->type() != AstNode::Type::Var)
 				{
 					error("error variable");
 					break;
@@ -652,13 +652,13 @@ AstNode* Parser::compoundStatement()
 bool Parser::canSkipSemicolon(AstNode* node)
 {
 	bool bSkipSEMI = false;
-	if (node->type() == AstNode::AstNodeType::WhileCompound
-		|| node->type() == AstNode::AstNodeType::IfCompound
-		|| node->type() == AstNode::AstNodeType::ForCompound
-		|| node->type() == AstNode::AstNodeType::Include
-		|| node->type() == AstNode::AstNodeType::Import
-		|| node->type() == AstNode::AstNodeType::Function
-		|| node->type() == AstNode::AstNodeType::Class)
+	if (node->type() == AstNode::Type::While
+		|| node->type() == AstNode::Type::If
+		|| node->type() == AstNode::Type::For
+		|| node->type() == AstNode::Type::Include
+		|| node->type() == AstNode::Type::Import
+		|| node->type() == AstNode::Type::FuncDecl
+		|| node->type() == AstNode::Type::ClassDecl)
 	{
 		if (m_currentToken.type() != TokenKind::Semi)
 			bSkipSEMI = true;
@@ -678,7 +678,7 @@ vector<AstNode*> Parser::statementList(string classname)
 		if (!bSkipSEMI)
 			consume(TokenKind::Semi);
 		AstNode* ret_statement = statement(classname);
-		if (ret_statement->type() != AstNode::AstNodeType::Empty)
+		if (ret_statement->type() != AstNode::Type::Empty)
 			nodes.push_back(ret_statement);
 		
 		bSkipSEMI = canSkipSemicolon(ret_statement);
@@ -1583,7 +1583,7 @@ void  Parser::startGlobalCheck(const vector<AstNode*>& nodes)
 	vector<GlobalStmt*> vec_global_vars;
 	for (size_t i = 0; i < nodes.size(); i++)
 	{
-		if (nodes[i]->type() == AstNode::AstNodeType::Global)
+		if (nodes[i]->type() == AstNode::Type::Global)
 			vec_global_vars.push_back((GlobalStmt*)nodes[i]);
 	}
 

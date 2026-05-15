@@ -16,7 +16,7 @@ public:
     std::map<std::string, AstNode*>& functions() { return m_functions; }
     std::map<std::string, bool>& globals() { return m_globals; }
     std::vector<AstNode*>& allNodes() { return m_nodes; }
-// free all allocated AST nodes
+    // free all allocated AST nodes
     void clearAllNodes();
     void clearGlobals();
 
