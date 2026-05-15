@@ -1,3 +1,5 @@
+# Copyright (c) 2023-2026 Lily King.
+
 cmake_minimum_required(VERSION 3.20)
 project(loong VERSION 0.2.0 LANGUAGES CXX)
 

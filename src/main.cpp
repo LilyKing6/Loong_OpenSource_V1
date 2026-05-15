@@ -1,3 +1,4 @@
+// Copyright (c) 2023-2026 Lily King.
 #include "loong/lexer.hpp"
 #include "loong/interpreter.hpp"
 #include "loong/version.hpp"

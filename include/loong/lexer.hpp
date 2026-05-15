@@ -1,3 +1,4 @@
+// Copyright (c) 2023-2026 Lily King.
 #pragma once
 
 #include <string>

@@ -1,3 +1,4 @@
+// Copyright (c) 2023-2026 Lily King.
 #include "loong/call_stack.hpp"
 #include "loong/token.hpp"
 
