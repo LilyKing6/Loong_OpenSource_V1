@@ -3,12 +3,8 @@
 #include <regex>
 #include <math.h>
 
-// #define NDEBUG
-
 #include "loong/library.hpp"
 #include "loong/interpreter.hpp"
-
-
 
 #ifdef _WIN32
 	#include <fcntl.h>
@@ -17,25 +13,11 @@
 	#include <unistd.h>
 #endif
 
-
-
 namespace loong {
 using namespace std;
 
 Interpreter* s_interpreter = nullptr;
 
-
-/**
- * @brief 格式化字符串
- *
- * 这个函数用于格式化字符串。它接受一个格式化字符串和一个参数向量，
- * 并根据格式化字符串中的占位符和参数向量中的值生成一个新的字符串。
- * 如果格式化过程中出现错误，它会返回相应的错误信息。
- *
- * @param format 格式化字符串
- * @param vecArgs 参数向量
- * @return 返回格式化后的字符串或错误信息
- */
 string Tool::formatString(string& format, vector<Variable>& vecArgs)
 {
 	const string err1 = "sprintf argument number error\r\n";
@@ -158,15 +140,6 @@ string Tool::formatString(string& format, vector<Variable>& vecArgs)
 	return "";
 }
 
-/**
- * @brief 读取文件内容
- *
- * 这个函数用于读取指定文件的内容，并将其作为字符串返回。
- * 如果文件无法打开或读取失败，则返回一个空字符串。
- *
- * @param strFilename 文件名
- * @return 返回文件内容的字符串
- */
 string Tool::readFile(const string& strFilename)
 {
 	FILE *fp = fopen(strFilename.c_str(), "rb");
@@ -186,12 +159,9 @@ string Tool::readFile(const string& strFilename)
 	return strbuf;
 }
 
-//从头文件目录中读取文件内容
 string Tool::readFileFromHeaderDir(const string& filename) 
 {
-	// 文件所在目录
 	string header_dir = getInterpreterDir() + "Include/";
-	// 全路径
 	string full_path = header_dir + filename;
 	DEBUG_VAR(full_path);
 	return readFile(full_path);
@@ -199,36 +169,28 @@ string Tool::readFileFromHeaderDir(const string& filename)
 
 string Tool::readFileWithPriority(const string& strFilename, const string& userDir)
 {
-    // 优先在默认的类库目录中查找头文件
     string filecontent = readFileFromHeaderDir(strFilename);
     if (filecontent.size() == 0)
     {
-        // 如果在默认的类库目录中找不到，则在用户目录中查找
         string full_path = userDir + strFilename;
 		DEBUG_VAR(full_path);
         filecontent = readFile(full_path);
         if (filecontent.size() == 0)
         {
-            // 如果仍然找不到，返回错误信息
-            // return "";
         }
     }
     return filecontent;
 }
 
-
 string Tool::getInterpreterDir() 
 {
-    // 获取解释器目录
 #ifdef _WIN32
     wchar_t buffer[MAX_PATH];
     GetModuleFileNameW(nullptr, buffer, MAX_PATH);
     std::wstring wbuffer(buffer);
     std::wstring::size_type pos = wbuffer.find_last_of(L"\\/");
 	std::string dir = std::string(wbuffer.begin(), wbuffer.begin() + pos + 1);
-	// printf("get_interpreter_dir: %s\n", dir.c_str());
     return dir;
-    // return std::string(wbuffer.begin(), wbuffer.begin() + pos + 1);
 #else
     char buffer[PATH_MAX];
     ssize_t len = readlink("/proc/self/exe", buffer, sizeof(buffer) - 1);
@@ -237,23 +199,10 @@ string Tool::getInterpreterDir()
         std::string::size_type pos = std::string(buffer).find_last_of("/");
         return std::string(buffer).substr(0, pos + 1);
     }
-    // 错误处理，例如抛出异常或返回错误码
-    // throw std::runtime_error("Failed to get interpreter directory");
 	return "";
 #endif
 }
 
-
-/**
- * @brief 将十进制数转换为十六进制字符
- *
- * 这个函数用于将一个十进制数（范围在 0 到 15 之间）转换为相应的十六进制字符。
- * 如果输入的数在 0 到 9 之间，则返回对应的数字字符；如果输入的数在 10 到 15 之间，
- * 则返回对应的大写字母字符。
- *
- * @param n 十进制数（范围在 0 到 15 之间）
- * @return 返回对应的十六进制字符
- */
 char dec2hexChar(short int n) {
 	if (0 <= n && n <= 9) {
 		return char(short('0') + n);
@@ -266,17 +215,6 @@ char dec2hexChar(short int n) {
 	}
 }
 
-
-/**
- * @brief 计算字符串中子字符串的出现次数
- *
- * 这个函数用于计算一个字符串中某个子字符串的出现次数。它接受两个字符串参数：
- * 一个是主字符串，另一个是要查找的子字符串。函数返回子字符串在主字符串中出现的次数。
- *
- * @param text 主字符串
- * @param str 要查找的子字符串
- * @return 返回子字符串在主字符串中出现的次数
- */
 int Tool::strCount(const string& text, const string& str)
 {
 	int count = 0;
@@ -291,17 +229,6 @@ int Tool::strCount(const string& text, const string& str)
 	return count;
 }
 
-/**
- * @brief 替换字符串中的子字符串
- *
- * 这个函数用于将一个字符串中的所有指定子字符串替换为另一个字符串。它接受三个字符串参数：
- * 一个是主字符串，另一个是要被替换的子字符串，第三个是替换后的新字符串。
- * 函数会修改主字符串，将其中的所有指定子字符串替换为新字符串。
- *
- * @param text 主字符串
- * @param str_old 要被替换的子字符串
- * @param str_new 替换后的新字符串
- */
 void Tool::strReplace(string& text, const string& str_old, const string& str_new)
 {
 	for (string::size_type pos(0); pos != string::npos; pos += str_new.length())
@@ -314,17 +241,6 @@ void Tool::strReplace(string& text, const string& str_old, const string& str_new
 	}
 }
 
-/**
- * @brief 分割字符串
- *
- * 这个函数用于将一个字符串按照指定的分隔符分割成多个子字符串，并将这些子字符串存储在一个向量中。
- * 它接受三个参数：一个是主字符串，另一个是分隔符字符串，第三个是用于存储结果的向量。
- * 函数会将分割后的子字符串存储在结果向量中。
- *
- * @param str 主字符串
- * @param splitstr 分隔符字符串
- * @param vecStr 用于存储结果的向量
- */
 void Tool::strSplit(const string& str, const string& splitstr, vector<string>& vecStr)
 {
 	string::size_type pos1, pos2;
@@ -340,19 +256,6 @@ void Tool::strSplit(const string& str, const string& splitstr, vector<string>& v
 	vecStr.push_back(str.substr(pos1));
 }
 
-/**
- * @brief 解释器
- *
- * 这个函数用于解释执行一段代码。它接受多个参数：代码字符串、输出文件名、参数向量、全局变量值和文件名。
- * 函数会创建一个词法分析器和一个解析器，然后使用解释器来解释执行代码。解释结果会存储在一个 Variable 对象中返回。
- *
- * @param code 要解释执行的代码字符串
- * @param outputfile 输出文件名
- * @param vecArgv 参数向量
- * @param globalValue 全局变量值
- * @param filename 文件名
- * @return 返回解释执行结果的 Variable 对象
- */
 Variable Tool::interpreter(const string& code, const string& outputfile, const vector<Variable>& vecArgv, const Variable& globalValue, string filename)
 {
 	FILE *out = nullptr;
@@ -390,30 +293,12 @@ Variable Tool::interpreter(const string& code, const string& outputfile, const v
 	return ret;
 }
 
-
-/**
- * @brief 打开文件
- *
- * 这个函数用于打开一个文件。它接受两个参数：文件名和打开模式，并返回一个指向文件的指针。
- * 如果文件无法打开，则返回 nullptr。
- *
- * @param filename 文件名
- * @param mode 打开模式（例如 "r" 表示只读，"w" 表示写入）
- * @return 返回一个指向文件的指针，如果文件无法打开，则返回 nullptr
- */
 void* File::open(const char *filename, const char *mode)
 {
 	FILE *fp = fopen(filename, mode);
 	return fp;
 }
 
-/**
- * @brief 关闭文件
- *
- * 这个函数用于关闭一个已经打开的文件。它接受一个指向文件的指针，并关闭该文件。
- *
- * @param handle 指向文件的指针
- */
 void File::close(void* handle)
 {
 	FILE* fp = (FILE*)handle;
@@ -421,18 +306,6 @@ void File::close(void* handle)
 		fclose((FILE*)handle);
 }
 
-/**
- * @brief 读取文件内容
- *
- * 这个函数用于从文件中读取指定大小的内容，并将读取的内容存储在一个 Variable 对象中。
- * 它接受三个参数：指向文件的指针、要读取的字节数和一个用于存储结果的 Variable 对象。
- * 如果读取成功，则返回 true；否则，返回 false。
- *
- * @param handle 指向文件的指针
- * @param size 要读取的字节数
- * @param result 用于存储读取结果的 Variable 对象
- * @return 如果读取成功，返回 true；否则，返回 false
- */
 bool File::read(void* handle, Int size, Variable& result)
 {
 	if (size <= 0)
@@ -451,16 +324,6 @@ bool File::read(void* handle, Int size, Variable& result)
 	return false;
 }
 
-/**
- * @brief 写入文件内容
- *
- * 这个函数用于向文件中写入内容。它接受两个参数：指向文件的指针和一个包含要写入内容的 Variable 对象。
- * 如果写入成功，则返回 true；否则，返回 false。
- *
- * @param handle 指向文件的指针
- * @param content 包含要写入内容的 Variable 对象
- * @return 如果写入成功，返回 true；否则，返回 false
- */
 bool File::write(void* handle, Variable& content)
 {
 	FILE* fp = (FILE*)handle;;
@@ -487,15 +350,6 @@ bool File::write(void* handle, Variable& content)
 	return false;
 }
 
-/**
- * @brief 获取文件大小
- *
- * 这个函数用于获取一个文件的大小。它接受一个指向文件的指针，并返回文件的大小（以字节为单位）。
- * 如果文件无法获取大小，则返回 -1。
- *
- * @param handle 指向文件的指针
- * @return 返回文件的大小（以字节为单位），如果文件无法获取大小，则返回 -1
- */
 Int File::size(void* handle)
 {
 	FILE* fp = (FILE*)handle;
@@ -515,16 +369,6 @@ Int File::size(void* handle)
 	return -1;
 }
 
-/**
- * @brief 设置文件指针位置
- *
- * 这个函数用于设置文件指针的位置。它接受一个指向文件的指针和一个位置偏移量，
- * 并将文件指针移动到指定的位置。如果操作成功，则返回 true；否则，返回 false。
- *
- * @param handle 指向文件的指针
- * @param pos 位置偏移量
- * @return 如果操作成功，返回 true；否则，返回 false
- */
 bool File::seek(void* handle, Int pos)
 {
 	FILE* fp = (FILE*)handle;
@@ -541,18 +385,6 @@ bool File::seek(void* handle, Int pos)
 	return false;
 }
 
-
-/**
- * @brief 比较两个 Variable 对象
- *
- * 这个函数用于比较两个 Variable 对象。它接受两个 Variable 对象作为参数，
- * 并根据它们的类型和值进行比较。如果第一个对象小于第二个对象，则返回 true；
- * 否则，返回 false。
- *
- * @param a 第一个 Variable 对象
- * @param b 第二个 Variable 对象
- * @return 如果第一个对象小于第二个对象，返回 true；否则，返回 false
- */
 bool LibraryBase::compare(const Variable& a, const Variable& b) {
 	
 	if (a.type() != b.type())
@@ -582,13 +414,6 @@ bool LibraryBase::compare(const Variable& a, const Variable& b) {
 	return false;
 }
 
-
-/**
- * @brief StringLib 类的构造函数
- *
- * 这个构造函数用于初始化 StringLib 对象。它设置了一些成员变量的初始值，
- * 并初始化了一个成员映射表，用于存储字符串操作的成员函数。
- */
 StringLib::StringLib()
 {
 	srand((unsigned)time(nullptr));
@@ -607,29 +432,10 @@ StringLib::StringLib()
 	m_members["upper"] = LibraryBase::LibMember::Upper;
 }
 
-/**
- * @brief StringLib 类的析构函数
- *
- * 这个析构函数用于在对象销毁时执行清理工作。目前没有具体的清理操作。
- */
 StringLib::~StringLib()
 {
 }
 
-
-/**
- * @brief 调用字符串成员函数
- *
- * 这个函数用于调用 StringLib 对象的成员函数。它接受四个参数：成员函数名、
- * 一个 Variable 对象（表示字符串）、一个参数向量和一个用于存储结果的 Variable 对象。
- * 函数会根据成员函数名和参数向量调用相应的字符串操作，并将结果存储在结果 Variable 对象中。
- *
- * @param name 成员函数名
- * @param var 表示字符串的 Variable 对象
- * @param args 参数向量
- * @param ret 用于存储结果的 Variable 对象
- * @return 如果调用成功，返回 true；否则，返回 false
- */
 bool StringLib::callMember(const string& name, Variable& var, const vector<Variable>& args, Variable& ret)
 {
 	map<string, LibraryBase::LibMember>::const_iterator itr = m_members.find(name);
@@ -971,13 +777,6 @@ bool StringLib::callMember(const string& name, Variable& var, const vector<Varia
 	return false;
 }
 
-
-/**
- * @brief ArrayLib 类的构造函数
- *
- * 这个构造函数用于初始化 ArrayLib 对象。它设置了一些成员变量的初始值，
- * 并初始化了一个成员映射表，用于存储数组操作的成员函数。
- */
 ArrayLib::ArrayLib()
 {
 	m_members["append"] = LibraryBase::LibMember::Append;
@@ -994,15 +793,9 @@ ArrayLib::ArrayLib()
 	m_members["create3d"] = LibraryBase::LibMember::Create3D;
 }
 
-/**
- * @brief ArrayLib 类的析构函数
- *
- * 这个析构函数用于在对象销毁时执行清理工作。目前没有具体的清理操作。
- */
 ArrayLib::~ArrayLib()
 {
 }
-
 
 bool ArrayLib::callMember(const string& name, Variable& var, vector<Variable>& args, Variable& ret)
 {
@@ -1599,50 +1392,24 @@ bool DictLib::callMember(const string& name, Variable& var, const vector<Variabl
 			error("get() arguments number error\r\n");
 	}
 
-
 	return false;
 }
 
-/**
- * @brief ClassLib 类的构造函数
- *
- * 这个构造函数用于初始化 ClassLib 对象。它设置了一些成员变量的初始值，
- * 并初始化了一个成员映射表，用于存储类操作的成员函数。
- */
 ClassLib::ClassLib()
 {
 	m_members["_getptr"] = LibraryBase::LibMember::GetPtr;
 	m_members["_restore"] = LibraryBase::LibMember::Restore;
 }
 
-/**
- * @brief ClassLib 类的析构函数
- *
- * 这个析构函数用于在对象销毁时执行清理工作。目前没有具体的清理操作。
- */
 ClassLib::~ClassLib()
 {
 }
 
-/**
- * @brief 调用类成员函数
- *
- * 这个函数用于调用 ClassLib 对象的成员函数。它接受四个参数：成员函数名、
- * 一个 Variable 对象（表示类实例）、一个参数向量和一个用于存储结果的 Variable 对象。
- * 函数会根据成员函数名和参数向量调用相应的类操作，并将结果存储在结果 Variable 对象中。
- *
- * @param name 成员函数名
- * @param var 表示类实例的 Variable 对象
- * @param args 参数向量
- * @param ret 用于存储结果的 Variable 对象
- * @return 如果调用成功，返回 true；否则，返回 false
- */
 bool ClassLib::callMember(const string& name, Variable& var, const vector<Variable>& args, Variable& ret)
 {
 	map<string, LibraryBase::LibMember>::const_iterator itr = m_members.find(name);
 	if (itr == m_members.end())
 	{
-		//error("member " + name + " not found.\r\n");
 		return false;
 	}
 
@@ -1680,21 +1447,10 @@ bool ClassLib::callMember(const string& name, Variable& var, const vector<Variab
 	return false;
 }
 
-/**
- * @brief 调用函数
- *
- * 这个函数用于调用各种函数。它接受一个参数向量和一个用于存储结果的 Variable 对象。
- * 函数会根据参数向量中的第一个元素（函数名）调用相应的函数，并将结果存储在结果 Variable 对象中。
- *
- * @param args 参数向量
- * @param ret 用于存储结果的 Variable 对象
- * @return 如果调用成功，返回 true；否则，返回 false
- */
 bool Func::callFunc(const vector<Variable>& args, Variable& ret)
 {
 	if (args.size() == 0)
 		return false;
-
 
 	if (args[0].stringValue() == "fopen")
 	{
@@ -1823,7 +1579,6 @@ bool Func::callFunc(const vector<Variable>& args, Variable& ret)
 		}
 		return false;
 	}
-
 
 	if (args[0].stringValue() == "time_clock")
 	{

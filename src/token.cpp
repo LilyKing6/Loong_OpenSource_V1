@@ -6,7 +6,6 @@
 
 namespace loong {
 
-// English keyword map
 static std::map<std::string, Token> englishKeywordMap =
 {
     {"main",  Token(TokenKind::Program, "main", 0, 0, "")},
@@ -42,7 +41,6 @@ static std::map<std::string, Token> englishKeywordMap =
     {"_fun", Token(TokenKind::Builtin, "_fun", 0, 0, "")}
 };
 
-// Chinese keyword map
 static std::map<std::string, Token> chineseKeywordMap =
 {
     {"program",  Token(TokenKind::Program, "program", 0, 0, "")},
@@ -78,21 +76,17 @@ static std::map<std::string, Token> chineseKeywordMap =
     {"_fun", Token(TokenKind::Builtin, "_fun", 0, 0, "")}
 };
 
-// Merged keyword map (Chinese takes priority)
 static std::map<std::string, Token> keywordMap;
 
-// Initialize the keyword map
 static void initializeKeywordMap()
 {
     static bool initialized = false;
     if (initialized) return;
 
-    // Add English keywords first
     for (const auto& pair : englishKeywordMap) {
         keywordMap[pair.first] = pair.second;
     }
 
-    // Add Chinese keywords (overrides English where they overlap)
     for (const auto& pair : chineseKeywordMap) {
         keywordMap[pair.first] = pair.second;
     }

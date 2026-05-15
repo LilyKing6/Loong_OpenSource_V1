@@ -1,31 +1,6 @@
 #include "loong/interpreter.hpp"
 #include <stdarg.h>
 
-/*
-License for Loong
-
-Copyright 2024 Lily King
-
-All Rights Reserved
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of this
-software and associated documentation files (the "Software"), to deal in the Software
-without restriction, including without limitation the rights to use, copy, modify, merge,
-publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons
-to whom the Software is furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all copies or
-substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS TokenKind::Or
-IMPLIED, INCLUDING BUT TokenKind::Not LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS TokenKind::For A PARTICULAR PURPOSE TokenKind::And NONINFRINGEMENT. IN NO EVENT SHALL
-THE AUTHORS TokenKind::Or COPYRIGHT HOLDERS BE LIABLE TokenKind::For ANY CLAIM, DAMAGES TokenKind::Or
-OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT TokenKind::Or OTHERWISE,
-ARISING FROM, OUT OF TokenKind::Or IN CONNECTION WITH THE SOFTWARE TokenKind::Or THE USE TokenKind::Or
-OTHER DEALINGS IN THE SOFTWARE.
-*/
-
 namespace loong {
 using namespace std;
 
@@ -38,7 +13,6 @@ Interpreter::Interpreter(const Parser& parser)
 	if (s_interpreter == nullptr)
 		s_interpreter = this;
 }
-
 
 Interpreter::~Interpreter()
 {
@@ -59,15 +33,6 @@ void Interpreter::formattedPrint(const char* format, ...)
 		printf("%s", buffer);
 }
 
-/**
- * @brief 报告错误信息
- *
- * 这个函数用于报告错误信息。它接受一个错误字符串和一个 Token 对象作为参数，
- * 并使用这些信息生成错误消息。错误消息会通过 formattedPrint 函数输出，并存储在 m_error 成员变量中。
- *
- * @param err 错误信息字符串
- * @param token 一个 Token 对象
- */
 void Interpreter::warning(const string& warn, const Token& token)
 {
 	char fileinfo[512];
@@ -92,15 +57,6 @@ void Interpreter::warning(const string& warn, const Token& token)
 	m_error = buff;
 }
 
-/**
- * @brief 报告错误信息
- *
- * 这个函数用于报告错误信息。它接受一个错误字符串和一个 Token 对象作为参数，
- * 并使用这些信息生成错误消息。错误消息会通过 formattedPrint 函数输出，并存储在 m_error 成员变量中。
- *
- * @param err 错误信息字符串
- * @param token 一个 Token 对象
- */
 void Interpreter::error(const string& err, const Token& token)
 {
 	char fileinfo[512];
@@ -125,16 +81,6 @@ void Interpreter::error(const string& err, const Token& token)
 	m_error = buff;
 }
 
-
-/**
- * @brief 访问 AST 节点
- *
- * 这个函数用于访问抽象语法树（AST）节点。它接受一个 AST 节点指针和一个用于存储结果的 Variable 对象。
- * 函数会根据节点的类型调用相应的访问函数，并将结果存储在结果 Variable 对象中。
- *
- * @param node 一个 AST 节点指针
- * @param res 用于存储结果的 Variable 对象
- */
 void Interpreter::visit(AstNode* node, Variable& res)
 {
 	res.reset();
@@ -244,16 +190,6 @@ void Interpreter::visit(AstNode* node, Variable& res)
 	}
 }
 
-
-/**
- * @brief 访问二元操作节点
- *
- * 这个函数用于访问二元操作（BinOp）节点。它接受一个 BinOp 节点指针和一个用于存储结果的 Variable 对象。
- * 函数会根据操作符的类型调用相应的操作，并将结果存储在结果 Variable 对象中。
- *
- * @param node 一个 BinOp 节点指针
- * @param res 用于存储结果的 Variable 对象
- */
 void Interpreter::visitBinOp(BinOp* node, Variable& res)
 {
 	TokenKind type = node->token().type();
@@ -391,7 +327,6 @@ void Interpreter::visitBinOp(BinOp* node, Variable& res)
 		res = res >> res2;
 	}
 
-
 	else if (type == TokenKind::Dot)
 	{
 		visitMember(node->left(), node->right(), res);
@@ -408,16 +343,6 @@ void Interpreter::visitBinOp(BinOp* node, Variable& res)
 		res.reset();
 }
 
-
-/**
- * @brief 访问数字节点
- *
- * 这个函数用于访问数字（NumLiteral）节点。它接受一个 NumLiteral 节点指针和一个用于存储结果的 Variable 对象。
- * 函数会根据数字的类型（整数或浮点数）将值存储在结果 Variable 对象中。
- *
- * @param node 一个 NumLiteral 节点指针
- * @param res 用于存储结果的 Variable 对象
- */
 void Interpreter::visitNum(NumLiteral* node, Variable& res)
 {
 	if (node->numType() == NumLiteral::NumType::Int)
@@ -430,15 +355,6 @@ void Interpreter::visitNum(NumLiteral* node, Variable& res)
 	}
 }
 
-/**
- * @brief 访问布尔节点
- *
- * 这个函数用于访问布尔（BoolLiteral）节点。它接受一个 BoolLiteral 节点指针和一个用于存储结果的 Variable 对象。
- * 函数会将布尔值转换为整数（0 或 1）并存储在结果 Variable 对象中。
- *
- * @param node 一个 BoolLiteral 节点指针
- * @param res 用于存储结果的 Variable 对象
- */
 void Interpreter::visitBool(BoolLiteral* node, Variable& res)
 {
 	int n = 0;
@@ -447,30 +363,12 @@ void Interpreter::visitBool(BoolLiteral* node, Variable& res)
 	res.setInt(n);
 }
 
-/**
- * @brief 访问字符串节点
- *
- * 这个函数用于访问字符串（StrLiteral）节点。它接受一个 StrLiteral 节点指针和一个用于存储结果的 Variable 对象。
- * 函数会将字符串值存储在结果 Variable 对象中。
- *
- * @param node 一个 StrLiteral 节点指针
- * @param res 用于存储结果的 Variable 对象
- */
 void Interpreter::visitStr(StrLiteral* node, Variable& res)
 {
 	res.setType(Variable::VarType::String);
 	res.stringValue() = node->value();
 }
 
-/**
- * @brief 访问数组节点
- *
- * 这个函数用于访问数组（ArrayLiteral）节点。它接受一个 ArrayLiteral 节点指针和一个用于存储结果的 Variable 对象。
- * 函数会创建一个新的数组，并将其初始化为节点中的初始值，然后将该数组存储在结果 Variable 对象中。
- *
- * @param node 一个 ArrayLiteral 节点指针
- * @param arr 用于存储结果的 Variable 对象
- */
 void Interpreter::visitArray(ArrayLiteral* node, Variable& arr)
 {
 	arr.setArray(0);
@@ -486,15 +384,6 @@ void Interpreter::visitArray(ArrayLiteral* node, Variable& arr)
 	}
 }
 
-/**
- * @brief 访问字典节点
- *
- * 这个函数用于访问字典（DictLiteral）节点。它接受一个 DictLiteral 节点指针和一个用于存储结果的 Variable 对象。
- * 函数会创建一个新的字典，并将其初始化为节点中的初始值，然后将该字典存储在结果 Variable 对象中。
- *
- * @param node 一个 DictLiteral 节点指针
- * @param dict 用于存储结果的 Variable 对象
- */
 void Interpreter::visitDict(DictLiteral* node, Variable& dict)
 {
 	string var_name = node->token().value();
@@ -648,7 +537,6 @@ void Interpreter::visitVar(VarRef* node, Variable& var_value)
 	else
 		var_value.info()["global"] = "0";
 
-
 	if (node->isFunc())
 	{
 		if (var_value.type() == Variable::VarType::Pointer)
@@ -678,7 +566,7 @@ void Interpreter::visitVar(VarRef* node, Variable& var_value)
 }
 void Interpreter::visitAssign(AssignExpr* node, Variable& res)
 {
-	if (node->left()->type()!=AstNode::AstNodeType::Var)//dict, array, class
+	if (node->left()->type()!=AstNode::AstNodeType::Var)
 	{
 		Variable var_value;
 		visit(node->left(),var_value);
@@ -908,7 +796,7 @@ void Interpreter::visitIfStmt(IfStmt* node, Variable& result)
 		}
 	}
 
-	return result.reset();//
+	return result.reset();
 }
 void Interpreter::visitForStmt(ForStmt* node, Variable& result)
 {
@@ -1258,7 +1146,7 @@ void Interpreter::visitBuiltin(BuiltinCall* node, Variable& res)
 		else
 			error("sprintf() arguments number error\r\n", node->token());
 
-		res = Variable("");//empty str
+		res = Variable("");
 		return;
 	}
 	else if (node->token().value() == "printf")
@@ -1361,7 +1249,6 @@ void Interpreter::visitBuiltin(BuiltinCall* node, Variable& res)
 		return;
 	}
 
-
 	return res.reset();
 }
 void Interpreter::visitClass(FuncCall* node, Variable& res)
@@ -1372,7 +1259,7 @@ void Interpreter::visitClass(FuncCall* node, Variable& res)
 void Interpreter::visitFunction(FuncDecl* node, Variable& res)
 {
 	string::size_type pos = node->name().rfind(".");
-	if ( pos != string::npos)//class function
+	if ( pos != string::npos)
 	{
 		string fun_name = node->name().substr(pos + 1);
 		ActivationRecord& ar = m_callStack.peek();
@@ -1526,9 +1413,7 @@ void Interpreter::execClass(ClassDecl* cls, vector<AstNode*>& exprs, Token& toke
 		visit(cls->statements()[i],result);
 		if (result.tag() == Variable::TagType::Return)
 		{
-			//m_callStack.pop();
 			result.setTag(Variable::TagType::Normal);
-			//return result;
 			if (result.type() != Variable::VarType::None && result.type() != Variable::VarType::Empty)
 				error("class " + cls->name()+" cannot return non-null type \r\n", cls->token());
 			break;
@@ -1545,38 +1430,20 @@ void Interpreter::execClass(ClassDecl* cls, vector<AstNode*>& exprs, Token& toke
 	res = new_ar.getValue("self");
 }
 
-/**
- * @brief 解释器的主要解释函数，负责解析和执行语法树。
- * 
- * 该函数首先调用解析器解析输入的代码，生成抽象语法树（AST）。
- * 如果解析过程中出现错误，则返回错误信息。
- * 如果没有错误，则遍历语法树，执行相应的操作，并返回执行结果。
- * 如果在遍历过程中出现错误，同样返回错误信息。
- * 
- * @return Variable 解释结果或错误信息。
- */
 Variable Interpreter::interpret()
 {
-	// 调用解析器解析输入代码，生成抽象语法树（AST）
 	AstNode* tree = m_parser.parse();
 	
-	// 检查解析过程中是否有错误信息
 	if (m_parser.errorMessage().size() > 0)
-		// 如果有错误信息，返回错误信息
 		return m_parser.errorMessage();
 	
-	// 初始化结果变量，用于存储解释结果
 	Variable result;
 	
-	// 遍历语法树，执行解释操作
 	visit(tree, result);
 	
-	// 检查遍历过程中是否有错误信息
 	if (errorMessage().size() > 0)
-		// 如果有错误信息，返回错误信息
 		return Variable(errorMessage());
 	
-	// 返回解释结果
 	return result;
 }
 
@@ -1632,7 +1499,7 @@ void Interpreter::visitMember(AstNode* obj, AstNode* member, Variable& res)
 			return;
 		}
 
-		if (exprs.size() == 0)//member
+		if (exprs.size() == 0)
 		{
 			Variable idx = Variable(memb->token().value());
 			Variable var_value;
@@ -1645,7 +1512,7 @@ void Interpreter::visitMember(AstNode* obj, AstNode* member, Variable& res)
 			}
 			if (!bSelf)
 			{
-				if (idx.stringValue().size() > 2 && idx.stringValue().substr(0, 2) == "__")//private member
+				if (idx.stringValue().size() > 2 && idx.stringValue().substr(0, 2) == "__")
 				{
 					error("cannot access private member [" + idx.stringValue() + "]\r\n", memb->token());
 					return;
@@ -1662,7 +1529,7 @@ void Interpreter::visitMember(AstNode* obj, AstNode* member, Variable& res)
 				return;
 			}
 		}
-		else//function
+		else
 		{
 			AstNode* save = nullptr;
 			if (var.dictValue()->find(memb->token().value()) != var.dictValue()->end())
@@ -1681,7 +1548,7 @@ void Interpreter::visitMember(AstNode* obj, AstNode* member, Variable& res)
 			}
 			if (!bSelf)
 			{
-				if (memb->token().value().size() > 2 && memb->token().value().substr(0, 2) == "__")//private function
+				if (memb->token().value().size() > 2 && memb->token().value().substr(0, 2) == "__")
 				{
 					error("cannot access private function [" + memb->token().value() + "]\r\n", memb->token());
 					return;
@@ -1715,7 +1582,7 @@ void Interpreter::visitMember(AstNode* obj, AstNode* member, Variable& res)
 
 			ActivationRecord new_ar(fun->name(), "function", 2);
 			var.index().clear();
-			new_ar.setValue(params[0], var);//self
+			new_ar.setValue(params[0], var);
 			for (size_t i = 0; i < params.size()-1; i++)
 			{
 				if (i >= 0 && i < args.size() && (args.size()>0 && args[0].type()!=Variable::VarType::Empty))
