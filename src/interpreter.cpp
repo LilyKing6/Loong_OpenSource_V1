@@ -88,260 +88,152 @@ void Interpreter::visit(AstNode* node, Variable& res)
 	if (node == nullptr || node->type() == AstNode::Type::Empty || m_error.size() > 0)
 		return;
 
-	auto type = node->type();
-	if (type == AstNode::Type::BinOp)
+	switch (node->type())
 	{
-		visitBinOp((BinOp*)node, res);
-		if(res.tag() == Variable::TagType::DivZeroError && res.type() == Variable::VarType::None)
-		{
+	case AstNode::Type::BinOp:
+		visitBinOp(static_cast<BinOp*>(node), res);
+		if (res.tag() == Variable::TagType::DivZeroError && res.type() == Variable::VarType::None)
 			error("division by zero", node->token());
-		}
 		if (res.tag() == Variable::TagType::Error)
-		{
 			error("unsupported operand type", node->token());
-		}	
-	}
-	else if (type == AstNode::Type::Num)
+		break;
+	case AstNode::Type::UnaryOp:
 	{
-		visitNum((NumLiteral*)node, res);
+		auto* unop = static_cast<UnaryOp*>(node);
+		visit(unop->operand(), res);
+		if (node->token().type() == TokenKind::Not)
+			res = Variable(!checkCondition(res));
+		else if (node->token().type() == TokenKind::BitwiseNot)
+			res = ~res;
+		else if (node->token().type() == TokenKind::Minus)
+			res = Variable(0) - res;
+		break;
 	}
-	else if (type == AstNode::Type::Bool)
-	{
-		visitBool((BoolLiteral*)node, res);
-	}
-	else if (type == AstNode::Type::Str)
-	{
-		visitStr((StrLiteral*)node, res);
-	}
-	else if (type == AstNode::Type::Array)
-	{
-		visitArray((ArrayLiteral*)node, res);
-	}
-	else if (type == AstNode::Type::Dict)
-	{
-		visitDict((DictLiteral*)node, res);
-	}
-	else if (type == AstNode::Type::Var)
-	{
-		visitVar((VarRef*)node, res);
-	}
-	else if (type == AstNode::Type::Assign)
-	{
-		visitAssign((AssignExpr*)node, res);
-	}
-	else if (type == AstNode::Type::Program)
-	{
-		visitProgram((Program*)node, res);
-	}
-	else if (type == AstNode::Type::ProgramBlock)
-	{
-		visitProgramBlock((ProgramBlock*)node, res);
-	}
-	else if (type == AstNode::Type::Block)
-	{
-		visitBlock((Block*)node, res);
-	}
-	else if (type == AstNode::Type::If)
-	{
-		visitIfStmt((IfStmt*)node, res);
-	}
-	else if (type == AstNode::Type::While)
-	{
-		visitWhileStmt((WhileStmt*)node, res);
-	}
-	else if (type == AstNode::Type::For)
-	{
-		visitForStmt((ForStmt*)node, res);
-	}
-	else if (type == AstNode::Type::Break)
-	{
-		visitBreak((BreakStmt*)node, res);
-	}
-	else if (type == AstNode::Type::Continue)
-	{
-		visitContinue((ContinueStmt*)node, res);
-	}
-	else if (type == AstNode::Type::Return)
-	{
-		visitReturn((ReturnStmt*)node, res);
-	}
-	else if (type == AstNode::Type::Builtin)
-	{
-		visitBuiltin((BuiltinCall*)node, res);
-	}
-	else if (type == AstNode::Type::FuncDecl)
-	{
-		visitFunction((FuncDecl*)node, res);
-	}
-	else if (type == AstNode::Type::FuncCall)
-	{
-		visitFunctionExec((FuncCall*)node, res);
-	}
-	else if (type == AstNode::Type::Include)
-	{
-		visitInclude((IncludeStmt*)node, res);
-	}
-	else if (type == AstNode::Type::Import)
-	{
-		visitImport((ImportStmt*)node, res);
-	}
-	else if (type == AstNode::Type::None)
-	{
+	case AstNode::Type::Num:
+		visitNum(static_cast<NumLiteral*>(node), res);
+		break;
+	case AstNode::Type::Bool:
+		visitBool(static_cast<BoolLiteral*>(node), res);
+		break;
+	case AstNode::Type::Str:
+		visitStr(static_cast<StrLiteral*>(node), res);
+		break;
+	case AstNode::Type::Array:
+		visitArray(static_cast<ArrayLiteral*>(node), res);
+		break;
+	case AstNode::Type::Dict:
+		visitDict(static_cast<DictLiteral*>(node), res);
+		break;
+	case AstNode::Type::Var:
+		visitVar(static_cast<VarRef*>(node), res);
+		break;
+	case AstNode::Type::Assign:
+		visitAssign(static_cast<AssignExpr*>(node), res);
+		break;
+	case AstNode::Type::Program:
+		visitProgram(static_cast<Program*>(node), res);
+		break;
+	case AstNode::Type::ProgramBlock:
+		visitProgramBlock(static_cast<ProgramBlock*>(node), res);
+		break;
+	case AstNode::Type::Block:
+		visitBlock(static_cast<Block*>(node), res);
+		break;
+	case AstNode::Type::If:
+		visitIfStmt(static_cast<IfStmt*>(node), res);
+		break;
+	case AstNode::Type::While:
+		visitWhileStmt(static_cast<WhileStmt*>(node), res);
+		break;
+	case AstNode::Type::For:
+		visitForStmt(static_cast<ForStmt*>(node), res);
+		break;
+	case AstNode::Type::Break:
+		visitBreak(static_cast<BreakStmt*>(node), res);
+		break;
+	case AstNode::Type::Continue:
+		visitContinue(static_cast<ContinueStmt*>(node), res);
+		break;
+	case AstNode::Type::Return:
+		visitReturn(static_cast<ReturnStmt*>(node), res);
+		break;
+	case AstNode::Type::Builtin:
+		visitBuiltin(static_cast<BuiltinCall*>(node), res);
+		break;
+	case AstNode::Type::FuncDecl:
+		visitFunction(static_cast<FuncDecl*>(node), res);
+		break;
+	case AstNode::Type::FuncCall:
+		visitFunctionExec(static_cast<FuncCall*>(node), res);
+		break;
+	case AstNode::Type::Include:
+		visitInclude(static_cast<IncludeStmt*>(node), res);
+		break;
+	case AstNode::Type::Import:
+		visitImport(static_cast<ImportStmt*>(node), res);
+		break;
+	case AstNode::Type::None:
 		res.setType(Variable::VarType::None);
+		break;
+	case AstNode::Type::Empty:
+	case AstNode::Type::ClassDecl:
+	case AstNode::Type::MemberAccess:
+	case AstNode::Type::Global:
+		break;
 	}
 }
 
 void Interpreter::visitBinOp(BinOp* node, Variable& res)
 {
 	TokenKind type = node->token().type();
-	if (type == TokenKind::Plus)
-	{
-		Variable res2;
-		visit(node->left(), res);
-		visit(node->right(), res2);
-		res = res + res2;
-	}
-	else if (type == TokenKind::Minus)
-	{
-		Variable res2;
-		visit(node->left(), res);
-		visit(node->right(), res2);
-		res = res - res2;
-	}
-	else if (type == TokenKind::Mul)
-	{
-		Variable res2;
-		visit(node->left(), res);
-		visit(node->right(), res2);
-		res = res * res2;
-	}
-	else if (type == TokenKind::Div)
-	{
-		Variable res2;
-		visit(node->left(), res);
-		visit(node->right(), res2);
-		res = res / res2;
-	}
-	else if (type == TokenKind::Mod)
-	{
-		Variable res2;
-		visit(node->left(), res);
-		visit(node->right(), res2);
-		res = res % res2;
-	}
-	else if (type == TokenKind::Equal)
-	{
-		Variable res2;
-		visit(node->left(), res);
-		visit(node->right(), res2);
-		res = res == res2;
-	}
-	else if (type == TokenKind::Greater)
-	{
-		Variable res2;
-		visit(node->left(), res);
-		visit(node->right(), res2);
-		res = res > res2;
-	}
-	else if (type == TokenKind::Less)
-	{
-		Variable res2;
-		visit(node->left(), res);
-		visit(node->right(), res2);
-		res = res < res2;
-	}
-	else if (type == TokenKind::GreaterEqual)
-	{
-		Variable res2;
-		visit(node->left(), res);
-		visit(node->right(), res2);
-		res = res >= res2;
-	}
-	else if (type == TokenKind::LessEqual)
-	{
-		Variable res2;
-		visit(node->left(), res);
-		visit(node->right(), res2);
-		res = res <= res2;
-	}
-	else if (type == TokenKind::NotEqual)
-	{
-		Variable res2;
-		visit(node->left(), res);
-		visit(node->right(), res2);
-		res = res != res2;
-	}
-	else if (type == TokenKind::And)
-	{
-		Variable res2;
-		visit(node->left(), res);
-		visit(node->right(), res2);
-		res = res && res2;
-	}
-	else if (type == TokenKind::Or)
-	{
-		Variable res2;
-		visit(node->left(), res);
-		visit(node->right(), res2);
-		res = res || res2;
-	}
 
-	else if (type == TokenKind::BitwiseAnd)
+	// Short-circuit logical operators
+	if (type == TokenKind::And)
 	{
-		Variable res2;
 		visit(node->left(), res);
-		visit(node->right(), res2);
-		res = res & res2;
-	}
-	else if (type == TokenKind::BitwiseOr)
-	{
-		Variable res2;
-		visit(node->left(), res);
-		visit(node->right(), res2);
-		res = res | res2;
-	}
-	else if (type == TokenKind::BitwiseXor)
-	{
-		Variable res2;
-		visit(node->left(), res);
-		visit(node->right(), res2);
-		res = res ^ res2;
-	}
-	else if (type == TokenKind::BitwiseNot)
-	{
+		if (!checkCondition(res)) { res = Variable(0); return; }
 		visit(node->right(), res);
-		res = ~res;
+		res = res && Variable(1);
+		return;
 	}
-	
-	else if (type == TokenKind::LeftShift)
+	if (type == TokenKind::Or)
 	{
-		Variable res2;
 		visit(node->left(), res);
-		visit(node->right(), res2);
-		res = res << res2;
-	}
-	else if (type == TokenKind::RightShift)
-	{
-		Variable res2;
-		visit(node->left(), res);
-		visit(node->right(), res2);
-		res = res >> res2;
+		if (checkCondition(res)) { res = Variable(1); return; }
+		visit(node->right(), res);
+		res = Variable(1) || res;
+		return;
 	}
 
-	else if (type == TokenKind::Dot)
+	// Member access and indexing
+	if (type == TokenKind::Dot) { visitMember(node->left(), node->right(), res); return; }
+	if (type == TokenKind::LSquare) { visitIndex(node->left(), node->right(), res); return; }
+
+	// Binary arithmetic/comparison/bitwise: visit both sides then apply
+	Variable left, right;
+	visit(node->left(), left);
+	visit(node->right(), right);
+
+	switch (type)
 	{
-		visitMember(node->left(), node->right(), res);
+	case TokenKind::Plus:         res = left + right; break;
+	case TokenKind::Minus:        res = left - right; break;
+	case TokenKind::Mul:          res = left * right; break;
+	case TokenKind::Div:          res = left / right; break;
+	case TokenKind::Mod:          res = left % right; break;
+	case TokenKind::Equal:        res = left == right; break;
+	case TokenKind::NotEqual:     res = left != right; break;
+	case TokenKind::Greater:      res = left > right; break;
+	case TokenKind::Less:         res = left < right; break;
+	case TokenKind::GreaterEqual: res = left >= right; break;
+	case TokenKind::LessEqual:    res = left <= right; break;
+	case TokenKind::BitwiseAnd:   res = left & right; break;
+	case TokenKind::BitwiseOr:    res = left | right; break;
+	case TokenKind::BitwiseXor:   res = left ^ right; break;
+	case TokenKind::LeftShift:    res = left << right; break;
+	case TokenKind::RightShift:   res = left >> right; break;
+	default: break;
 	}
-	else if (type == TokenKind::LSquare)
-	{
-		visitIndex(node->left(), node->right(), res);
-	}
-	else if (type == TokenKind::Not)
-	{
-		visitNot(node->right(), res);
-	}
-	else
-		res.reset();
 }
 
 void Interpreter::visitNum(NumLiteral* node, Variable& res)
