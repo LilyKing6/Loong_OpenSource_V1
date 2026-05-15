@@ -6,7 +6,7 @@ using namespace loong;
 int main() {
     std::string testCode = "print(\"Hi\");";
 
-    Lexer lexer(testCode, "test.loong");
+    Lexer lexer(testCode, "test.lo");
 
     std::cout << "Lexer results:" << std::endl;
     std::cout << "Token count: " << lexer.tokenCount() << std::endl;
