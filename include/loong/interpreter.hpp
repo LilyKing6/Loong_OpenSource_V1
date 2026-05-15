@@ -11,14 +11,17 @@
 
 namespace loong {
 
+// tree-walking interpreter that evaluates the AST
 class Interpreter
 {
 public:
     Interpreter(const Parser& parser);
     ~Interpreter();
+// parse and execute the full program, returning the result
     Variable interpret();
     [[nodiscard]] std::string errorMessage() { return m_error; }
     void setOutputFile(FILE* out) { m_outputFile = out; }
+// dispatch to the appropriate visit method based on node type
     void visit(AstNode* node, Variable& res);
     [[nodiscard]] Parser& parser() { return m_parser; }
     [[nodiscard]] CallStack& callStack() { return m_callStack; }
@@ -51,16 +54,27 @@ private:
     void visitFunction(FuncDecl* node, Variable& res);
     void visitFunctionExec(FuncCall* node, Variable& res);
     void visitClass(FuncCall* node, Variable& res);
+// handle member access dispatch (string/array/dict/class methods)
     void visitMember(AstNode* obj, AstNode* member, Variable& res);
+// handle subscript indexing (array, dict, string)
     void visitIndex(AstNode* obj, AstNode* idx, Variable& res);
+// handle logical not
     void visitNot(AstNode* obj, Variable& res);
+// execute a function call with argument evaluation
     void execFunction(FuncDecl* fun, std::vector<AstNode*>& exprs, Token& token, Variable& res);
+// instantiate a class with constructor arguments
     void execClass(ClassDecl* cls, std::vector<AstNode*>& exprs, Token& token, Variable& res);
+// deep-copy an object (dict) for class instances
     void copyObject(Variable& object, Variable& res);
+// format and output a variable for print/builtin
     void printObject(Variable& object);
+// read a value by index from array, dict, or string
     void getIndexValue(Variable& var, Variable& idx, Variable& res);
+// write a value by index into array, dict, or string
     void setIndexValue(const std::string& varName, Variable& var, Variable& idxValue, const Variable& result, const Token& token);
+// evaluate a variable as a boolean condition
     [[nodiscard]] bool checkCondition(Variable& condition);
+// printf-like output to file or stdout
     void formattedPrint(const char* format, ...);
     void warning(const std::string& warn, const Token& token);
     void error(const std::string& err, const Token& token);

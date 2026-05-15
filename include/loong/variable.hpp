@@ -9,8 +9,10 @@
 
 namespace loong {
 
+// 64-bit integer type used throughout the interpreter
 using Int = std::int64_t;
 
+// ordered key-value map backed by a vector (preserves insertion order)
 class VecMap
 {
 public:
@@ -42,9 +44,12 @@ private:
     std::vector<std::pair<std::string, std::string>> m_data;
 };
 
+// dynamic value: string, int, float, array, dict, pointer, or class
+// uses reference counting for arrays, dicts, and pointers
 class Variable
 {
 public:
+// runtime value type discriminator
     enum class VarType
     {
         Empty,
@@ -58,6 +63,7 @@ public:
         Class
     };
 
+// control flow tag used during interpretation
     enum class TagType
     {
         Normal,
@@ -73,7 +79,9 @@ public:
     Variable& operator=(const Variable& cv);
     Variable(const std::string& value);
     Variable(Int value);
+// construct from double, setting float type
     Variable& setDouble(double value);
+// mark this variable as carrying an error
     Variable& setError();
     ~Variable();
 
@@ -97,6 +105,7 @@ public:
     void setIndex(const std::vector<Variable>& index) { m_index = index; }
     [[nodiscard]] void* pointerValue() const { return m_pointer; }
     void setPointer(void* p) { m_pointer = p; }
+// initialize as a non-owning pointer reference
     void initPointerRef(void* p);
 
     Variable operator+(const Variable& right);
@@ -125,6 +134,7 @@ private:
     void increaseRefCount();
     void decreaseRefCount();
 
+// reference count tables for heap-allocated objects
     static std::map<std::vector<Variable>*, int> s_arrayRefCount;
     static std::map<std::map<Variable, Variable>*, int> s_dictRefCount;
     static std::map<void*, int> s_pointerRefCount;

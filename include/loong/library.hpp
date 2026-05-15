@@ -14,6 +14,7 @@
 
 namespace loong {
 
+// static utility methods for string formatting, file I/O, URL encoding
 class Tool
 {
 public:
@@ -27,9 +28,11 @@ public:
     static int strCount(const std::string& text, const std::string& str);
     static void strReplace(std::string& text, const std::string& oldStr, const std::string& newStr);
     static void strSplit(const std::string& str, const std::string& splitStr, std::vector<std::string>& result);
+// run a sub-interpreter on a code string
     static Variable interpreter(const std::string& code, const std::string& outputfile, const std::vector<Variable>& argv, const Variable& globalValue, std::string filename);
 };
 
+// file handle wrapper for reading/writing binary files
 class File
 {
 public:
@@ -41,6 +44,7 @@ public:
     Int size(void* handle);
 };
 
+// dynamic library loader (DLL on Windows, dlopen on Linux)
 class Dll
 {
 public:
@@ -49,9 +53,11 @@ public:
     bool callLibrary(const std::vector<Variable>& args, Variable& result);
 };
 
+// base class for type-specific method dispatch (string/array/dict/class)
 class LibraryBase
 {
 public:
+// member method identifiers for library dispatch
     enum class LibMember
     {
         Substr,
@@ -87,9 +93,11 @@ public:
     LibraryBase() {}
     virtual ~LibraryBase() {}
 
+// dispatch a method call by name; returns false if not found
     virtual bool callMember(const std::string& name, Variable& var, const std::vector<Variable>& args, Variable& ret) { return false; }
     void error(std::string err) { m_error = err; }
     [[nodiscard]] std::string errorMessage() { return m_error; }
+// comparison function for sorting variables
     static bool compare(const Variable& a, const Variable& b);
 
 private:
@@ -98,6 +106,7 @@ protected:
     std::map<std::string, LibMember> m_members;
 };
 
+// string manipulation methods (substr, find, replace, split, etc.)
 class StringLib : public LibraryBase
 {
 public:
@@ -106,6 +115,7 @@ public:
     bool callMember(const std::string& name, Variable& var, const std::vector<Variable>& args, Variable& ret) override;
 };
 
+// array manipulation methods (append, resize, sort, etc.)
 class ArrayLib : public LibraryBase
 {
 public:
@@ -114,6 +124,7 @@ public:
     bool callMember(const std::string& name, Variable& var, std::vector<Variable>& args, Variable& ret);
 };
 
+// dictionary manipulation methods (keys, values, iterators)
 class DictLib : public LibraryBase
 {
 public:
@@ -122,6 +133,7 @@ public:
     bool callMember(const std::string& name, Variable& var, const std::vector<Variable>& args, Variable& ret) override;
 };
 
+// class instance method dispatch
 class ClassLib : public LibraryBase
 {
 public:
@@ -130,6 +142,7 @@ public:
     bool callMember(const std::string& name, Variable& var, const std::vector<Variable>& args, Variable& ret) override;
 };
 
+// built-in functions (type conversion, math, regex, set operations)
 class Func
 {
 public:

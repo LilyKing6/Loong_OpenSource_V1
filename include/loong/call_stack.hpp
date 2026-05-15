@@ -7,6 +7,7 @@
 
 namespace loong {
 
+// stores variables for a single scope (function call, global scope)
 class ActivationRecord
 {
 public:
@@ -21,6 +22,7 @@ public:
     void setDictValue(const std::string& key, const Variable& value, const Variable& dictIndex);
     Variable& getDictValue(const std::string& key, const Variable& dictIndex);
     [[nodiscard]] Variable::VarType getVarType(const std::string& key);
+// populate with global dict and argv array
     void createGlobal(const Variable& globalValue, const std::vector<Variable>& argv, const std::string& argvName);
     Variable& getGlobalValue(const std::string& varName);
     void setGlobalValue(const std::string& varName, const Variable& value);
@@ -33,6 +35,7 @@ private:
     int m_level;
 };
 
+// stack of activation records managing function call scopes
 class CallStack
 {
 public:

@@ -7,6 +7,7 @@
 
 namespace loong {
 
+// shared repository for all parsed functions, globals, and AST nodes
 class GlobalData
 {
 public:
@@ -15,6 +16,7 @@ public:
     std::map<std::string, AstNode*>& functions() { return m_functions; }
     std::map<std::string, bool>& globals() { return m_globals; }
     std::vector<AstNode*>& allNodes() { return m_nodes; }
+// free all allocated AST nodes
     void clearAllNodes();
     void clearGlobals();
 
@@ -24,6 +26,7 @@ private:
     std::vector<AstNode*> m_nodes;
 };
 
+// tracks variables in a scope to validate global declarations
 class GlobalChecker
 {
 public:
@@ -37,6 +40,7 @@ private:
     std::map<std::string, bool> m_assignVars;
 };
 
+// stack of GlobalCheckers used during parsing
 class CheckStack
 {
 public:

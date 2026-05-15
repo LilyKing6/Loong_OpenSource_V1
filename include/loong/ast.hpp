@@ -8,9 +8,11 @@
 
 namespace loong {
 
+// base class for all AST nodes
 class AstNode
 {
 public:
+// discriminated type for AST node dispatch
     enum class AstNodeType
     {
         Empty,
@@ -53,18 +55,21 @@ protected:
     Token m_token;
 };
 
+// placeholder for empty statements
 class NoOp : public AstNode
 {
 public:
     NoOp() { m_type = AstNodeType::Empty; }
 };
 
+// null/none literal
 class NoneNode : public AstNode
 {
 public:
     NoneNode() { m_type = AstNodeType::None; }
 };
 
+// binary operation (arithmetic, comparison, logical, bitwise)
 class BinOp : public AstNode
 {
 public:
@@ -77,6 +82,7 @@ private:
     AstNode* m_right;
 };
 
+// numeric literal (int or float)
 class NumLiteral : public AstNode
 {
 public:
@@ -94,6 +100,7 @@ private:
     double m_floatValue;
 };
 
+// boolean literal
 class BoolLiteral : public AstNode
 {
 public:
@@ -104,6 +111,7 @@ private:
     bool m_value;
 };
 
+// string literal
 class StrLiteral : public AstNode
 {
 public:
@@ -114,6 +122,7 @@ private:
     std::string m_value;
 };
 
+// array constructor with optional size and initializers
 class ArrayLiteral : public AstNode
 {
 public:
@@ -126,6 +135,7 @@ private:
     std::vector<AstNode*> m_initializers;
 };
 
+// dictionary constructor with key-value pairs
 class DictLiteral : public AstNode
 {
 public:
@@ -138,6 +148,7 @@ private:
     std::vector<AstNode*> m_rightInits;
 };
 
+// variable reference, optionally with subscript expressions
 class VarRef : public AstNode
 {
 public:
@@ -156,6 +167,7 @@ private:
     bool m_func;
 };
 
+// assignment expression (left op right)
 class AssignExpr : public AstNode
 {
 public:
@@ -168,6 +180,7 @@ private:
     AstNode* m_right;
 };
 
+// class definition with constructor params and body
 class ClassDecl : public AstNode
 {
 public:
@@ -184,6 +197,7 @@ private:
     std::vector<AstNode*> m_statements;
 };
 
+// function definition with parameters and body
 class FuncDecl : public AstNode
 {
 public:
@@ -200,6 +214,7 @@ private:
     std::vector<AstNode*> m_statements;
 };
 
+// function call with argument expressions
 class FuncCall : public AstNode
 {
 public:
@@ -215,6 +230,7 @@ private:
     bool m_var;
 };
 
+// built-in function call (print, typeof, etc.)
 class BuiltinCall : public AstNode
 {
 public:
@@ -225,6 +241,7 @@ private:
     std::vector<AstNode*> m_exprs;
 };
 
+// member access via dot operator (obj.member)
 class MemberAccess : public AstNode
 {
 public:
@@ -239,18 +256,21 @@ private:
     std::vector<AstNode*> m_exprs;
 };
 
+// break statement for loop exit
 class BreakStmt : public AstNode
 {
 public:
     BreakStmt(const Token& token) { m_type = AstNodeType::Break; m_token = token; }
 };
 
+// continue statement for loop iteration skip
 class ContinueStmt : public AstNode
 {
 public:
     ContinueStmt(const Token& token) { m_type = AstNodeType::Continue; m_token = token; }
 };
 
+// return statement with optional expression
 class ReturnStmt : public AstNode
 {
 public:
@@ -261,6 +281,7 @@ private:
     AstNode* m_expr;
 };
 
+// while loop with condition and body
 class WhileStmt : public AstNode
 {
 public:
@@ -273,6 +294,7 @@ private:
     std::vector<AstNode*> m_statements;
 };
 
+// for loop with init, condition, update, and body
 class ForStmt : public AstNode
 {
 public:
@@ -289,6 +311,7 @@ private:
     std::vector<AstNode*> m_statements;
 };
 
+// if/else conditional with true and false branches
 class IfStmt : public AstNode
 {
 public:
@@ -313,6 +336,7 @@ private:
     std::vector<AstNode*> m_children;
 };
 
+// top-level program block wrapping globals + compound
 class ProgramBlock : public AstNode
 {
 public:
@@ -339,6 +363,7 @@ private:
     std::vector<AstNode*> m_globalVars;
 };
 
+// include directive for importing source files
 class IncludeStmt : public AstNode
 {
 public:
@@ -349,6 +374,7 @@ private:
     std::vector<AstNode*> m_globalVars;
 };
 
+// import directive for loading libraries
 class ImportStmt : public AstNode
 {
 public:
@@ -359,6 +385,7 @@ private:
     std::vector<AstNode*> m_globalVars;
 };
 
+// global variable declaration
 class GlobalStmt : public AstNode
 {
 public:

@@ -6,6 +6,7 @@
 
 namespace loong {
 
+// converts source text into a stream of tokens
 class Lexer
 {
 public:
@@ -15,6 +16,7 @@ public:
 
     void error();
     void error(const std::string& message);
+// move to the next character in source
     void advance();
     void skipWhitespace();
     void skipComment();
@@ -22,11 +24,17 @@ public:
     void skipWhitespaceAndComments();
     char peek();
     char peekTwo();
+// consume and return the next token
     Token getNextToken();
+// look ahead without consuming
     Token peekNextToken();
+// lex an identifier or keyword
     Token id();
+// lex a numeric literal (int or float)
     Token number();
+// lex a string literal with escape sequences
     Token str();
+// handle escape sequences inside strings
     void processSpecialChar(std::string& result);
 
     [[nodiscard]] int tokenCount() const { return m_tokenCount; }
