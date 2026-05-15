@@ -1,29 +1,33 @@
-#include "Lexer.h"
+#include "loong/lexer.hpp"
+
+namespace loong {
+
+using namespace std;
 
 // 初始化词法分析器
-CLexer::CLexer(const string& text, const string& filename)
+Lexer::Lexer(const string& text, const string& filename)
 {
 	// 初始化输入文本
-	m_strText = text;
+	m_text = text;
 
 	// 初始化当前位置为0
-	m_nPos = 0;
+	m_pos = 0;
 
 	// 初始化当前字符为0
 	m_curChar = 0;
 
 	// 如果当前位置在文本范围内
-	if (m_nPos >= 0 && m_nPos < m_strText.size())
-		m_curChar = m_strText[m_nPos]; // 设置当前字符为文本的第一个字符
+	if (m_pos >= 0 && m_pos < m_text.size())
+		m_curChar = m_text[m_pos]; // 设置当前字符为文本的第一个字符
 
 	// 初始化当前行号为1
-	m_nLineNo = 1;
+	m_lineNo = 1;
 
 	// 初始化当前列号为1
-	m_nColumn = 1;
+	m_column = 1;
 
 	// 初始化文件名
-	m_strFilename = filename;
+	m_filename = filename;
 
 	// 初始化统计信息
 	m_tokenCount = 0;
@@ -31,80 +35,80 @@ CLexer::CLexer(const string& text, const string& filename)
 	m_commentLines = 0;
 }
 
-CLexer::~CLexer()
+Lexer::~Lexer()
 {
 }
 
 /* 抛出词法分析错误 */
-void CLexer::error()
+void Lexer::error()
 {
 	m_errorCount++;
 	printf("词法分析错误: 在文件 %s 第 %d 行第 %d 列发现无效字符 '%c' (ASCII: %d)\r\n",
-		   m_strFilename.c_str(), m_nLineNo, m_nColumn, m_curChar, (int)m_curChar);
+		   m_filename.c_str(), m_lineNo, m_column, m_curChar, (int)m_curChar);
 }
 
 /* 抛出词法分析错误（带自定义消息） */
-void CLexer::error(const string& message)
+void Lexer::error(const string& message)
 {
 	m_errorCount++;
 	printf("词法分析错误: %s 在文件 %s 第 %d 行第 %d 列\r\n",
-		   message.c_str(), m_strFilename.c_str(), m_nLineNo, m_nColumn);
+		   message.c_str(), m_filename.c_str(), m_lineNo, m_column);
 }
 
 /* 前进到下一个字符 */
-void CLexer::advance()
+void Lexer::advance()
 {
 	// 如果当前字符是换行符，更新行号和列号
 	if (m_curChar == '\n')
 	{
-		m_nLineNo += 1;
-		m_nColumn = 0;
+		m_lineNo += 1;
+		m_column = 0;
 	}
 
-	m_nPos++;
+	m_pos++;
 	// 如果当前位置超出文本范围，设置当前字符为0
-	if (m_nPos > m_strText.size() - 1)
+	if (m_pos > m_text.size() - 1)
 	{
-		m_curChar = 0; 
+		m_curChar = 0;
 	}
 	else
 	{
 		// 否则，更新当前字符和列号
-		m_curChar = m_strText[m_nPos];
-		m_nColumn += 1;
+		m_curChar = m_text[m_pos];
+		m_column += 1;
 	}
 }
 /* 查看下一个字符 */
-char CLexer::peek()
+char Lexer::peek()
 {
-	string::size_type peek_pos = m_nPos + 1;
+	string::size_type peek_pos = m_pos + 1;
 	// 如果当前位置超出文本范围，返回0
-	if (peek_pos > m_strText.size() - 1)
-		return 0; 
+	if (peek_pos > m_text.size() - 1)
+		return 0;
 	else
-		return m_strText[peek_pos];
+		return m_text[peek_pos];
 
 }
 /* 查看下下个字符 */
-char CLexer::peek_two()
+char Lexer::peekTwo()
 {
-	string::size_type peek_pos = m_nPos + 2;
+	string::size_type peek_pos = m_pos + 2;
 	// 如果当前位置超出文本范围，返回0
-	if (peek_pos > m_strText.size() - 1)
-		return 0; 
+	if (peek_pos > m_text.size() - 1)
+		return 0;
 	else
-		return m_strText[peek_pos];
+		return m_text[peek_pos];
 
 }
 /* 跳过空白字符 */
-void CLexer::skip_whitespace()
+void Lexer::skipWhitespace()
 {
-	while (m_curChar != 0 
-		&& (m_curChar == ' ' || m_curChar == '	' || m_curChar == '\r' || m_curChar == '\n'))
+	while (m_curChar != 0
+		&& (m_curChar == ' ' || m_curChar == '\t' || m_curChar == '\r' || m_curChar == '\n'))
 		advance();
 }
 /* 跳过注释 */
-void CLexer::skip_comment()
+void Lexer::skipComment()
 {
 	m_commentLines++;
 	while (m_curChar != '\n' && m_curChar != 0)
@@ -112,9 +116,9 @@ void CLexer::skip_comment()
 	advance();
 }
 /* 跳过块注释 */
-void CLexer::skip_comment_block()
+void Lexer::skipCommentBlock()
 {
-	int start_line = m_nLineNo;
+	int start_line = m_lineNo;
 	int lines_in_comment = 1; // 至少一行
 
 	while (!(m_curChar == '*' && peek() == '/') && m_curChar != 0)
@@ -142,7 +146,7 @@ void CLexer::skip_comment_block()
 }
 
 /* 识别标识符 */
-CToken CLexer::id()
+Token Lexer::id()
 {
 	string result;
 	while (m_curChar != 0)
@@ -156,14 +160,14 @@ CToken CLexer::id()
 			result += m_curChar;
 		else
 			break;
-		
+
 		advance();
 	}
-	return CToken::getToken(result, m_nLineNo, m_nColumn, m_strFilename);
+	return Token::lookupToken(result, m_lineNo, m_column, m_filename);
 }
 
 /* 识别数字 */
-CToken CLexer::number()
+Token Lexer::number()
 {
 	string result;
 	int base = 10; // 默认十进制
@@ -244,17 +248,17 @@ CToken CLexer::number()
 			}
 		}
 		// 实数
-		return makeToken(REAL, result, m_nLineNo, m_nColumn, m_strFilename);
+		return createToken(TokenKind::Real, result, m_lineNo, m_column, m_filename);
 	}
 	else
 	{
 		// 整数（包括二进制、八进制、十六进制）
-		return makeToken(INTEGER, result, m_nLineNo, m_nColumn, m_strFilename);
+		return createToken(TokenKind::Integer, result, m_lineNo, m_column, m_filename);
 	}
 }
 
 /* 处理特殊字符 */
-void CLexer::process_special_char(string& result)
+void Lexer::processSpecialChar(string& result)
 {
 	string new_result;
 	for (string::size_type i = 0; i < result.size(); i++)
@@ -313,11 +317,11 @@ void CLexer::process_special_char(string& result)
 }
 
 /* 识别字符串 */
-CToken CLexer::str()
+Token Lexer::str()
 {
 	string result;
-	int start_line = m_nLineNo;
-	int start_column = m_nColumn;
+	int start_line = m_lineNo;
+	int start_column = m_column;
 
 	while (m_curChar != '"' && m_curChar != 0)
 	{
@@ -332,7 +336,7 @@ CToken CLexer::str()
 			}
 			else
 			{
-				// 其他转义字符，留在原字符串中由process_special_char处理
+				// 其他转义字符，留在原字符串中由processSpecialChar处理
 				result += m_curChar;
 				advance();
 			}
@@ -341,7 +345,7 @@ CToken CLexer::str()
 		{
 			// 字符串中的换行符（未闭合的字符串）
 			error("字符串字面量未闭合");
-			return makeToken(STRING, result, start_line, start_column, m_strFilename);
+			return createToken(TokenKind::String, result, start_line, start_column, m_filename);
 		}
 		else
 		{
@@ -354,49 +358,49 @@ CToken CLexer::str()
 	{
 		// 文件结束但字符串未闭合
 		error("字符串字面量未闭合");
-		return makeToken(STRING, result, start_line, start_column, m_strFilename);
+		return createToken(TokenKind::String, result, start_line, start_column, m_filename);
 	}
 
 	advance(); // 跳过结束的引号
 
-	process_special_char(result);
+	processSpecialChar(result);
 
-	return makeToken(STRING, result, start_line, start_column, m_strFilename);
+	return createToken(TokenKind::String, result, start_line, start_column, m_filename);
 }
 
 /* 查看下一个标记 */
-CToken CLexer::peek_next_token()
+Token Lexer::peekNextToken()
 {
 	// 保存当前状态
-	string::size_type saved_pos = m_nPos;
+	string::size_type saved_pos = m_pos;
 	char saved_char = m_curChar;
-	int saved_line = m_nLineNo;
-	int saved_column = m_nColumn;
+	int saved_line = m_lineNo;
+	int saved_column = m_column;
 
 	// 跳过空白字符和注释
-	skip_whitespace_and_comments();
+	skipWhitespaceAndComments();
 
 	// 根据当前字符类型返回相应的token
-	CToken token = get_next_token();
+	Token token = getNextToken();
 
 	// 恢复状态
-	m_nPos = saved_pos;
+	m_pos = saved_pos;
 	m_curChar = saved_char;
-	m_nLineNo = saved_line;
-	m_nColumn = saved_column;
+	m_lineNo = saved_line;
+	m_column = saved_column;
 
 	return token;
 }
 
 /* 跳过空白字符和注释（辅助函数） */
-void CLexer::skip_whitespace_and_comments()
+void Lexer::skipWhitespaceAndComments()
 {
 	while (m_curChar != 0)
 	{
 		// 跳过空白字符
 		if (m_curChar == ' ' || m_curChar == '\t' || m_curChar == '\r' || m_curChar == '\n')
 		{
-			skip_whitespace();
+			skipWhitespace();
 			continue;
 		}
 
@@ -405,7 +409,7 @@ void CLexer::skip_whitespace_and_comments()
 		{
 			advance();
 			advance();
-			skip_comment();
+			skipComment();
 			continue;
 		}
 
@@ -414,7 +418,7 @@ void CLexer::skip_whitespace_and_comments()
 		{
 			advance();
 			advance();
-			skip_comment();
+			skipComment();
 			continue;
 		}
 
@@ -423,7 +427,7 @@ void CLexer::skip_whitespace_and_comments()
 		{
 			advance();
 			advance();
-			skip_comment_block();
+			skipCommentBlock();
 			continue;
 		}
 
@@ -433,14 +437,14 @@ void CLexer::skip_whitespace_and_comments()
 }
 
 /* 获取下一个标记 */
-CToken CLexer::get_next_token()
+Token Lexer::getNextToken()
 {
     while (m_curChar != 0)
     {
         // 空格、制表符、回车、换行符
-        if (m_curChar == ' ' || m_curChar == '	' || m_curChar == '\r' || m_curChar == '\n')
+        if (m_curChar == ' ' || m_curChar == '\t' || m_curChar == '\r' || m_curChar == '\n')
         {
-            skip_whitespace();
+            skipWhitespace();
             continue;
         }
         // 注释 //
@@ -448,7 +452,7 @@ CToken CLexer::get_next_token()
         {
             advance();
             advance();
-            skip_comment();
+            skipComment();
             continue;
         }
         // apache cgi
@@ -456,7 +460,7 @@ CToken CLexer::get_next_token()
         {
             advance();
             advance();
-            skip_comment();
+            skipComment();
             continue;
         }
         // 注释块 /* */
@@ -464,32 +468,32 @@ CToken CLexer::get_next_token()
         {
             advance();
             advance();
-            skip_comment_block();
+            skipCommentBlock();
             continue;
         }
         // 开始标记 {
         if (m_curChar == '{')
         {
             advance();
-            return makeToken(BEGIN, "{", m_nLineNo, m_nColumn, m_strFilename);
+            return createToken(TokenKind::Begin, "{", m_lineNo, m_column, m_filename);
         }
         // 结束标记 }
         if (m_curChar == '}')
         {
             advance();
-            return makeToken(END, "}", m_nLineNo, m_nColumn, m_strFilename);
+            return createToken(TokenKind::End, "}", m_lineNo, m_column, m_filename);
         }
         // 左方括号 [
         if (m_curChar == '[')
         {
             advance();
-            return makeToken(LSQUARE, "[", m_nLineNo, m_nColumn, m_strFilename);
+            return createToken(TokenKind::LSquare, "[", m_lineNo, m_column, m_filename);
         }
         // 右方括号 ]
         if (m_curChar == ']')
         {
             advance();
-            return makeToken(RSQUARE, "]", m_nLineNo, m_nColumn, m_strFilename);
+            return createToken(TokenKind::RSquare, "]", m_lineNo, m_column, m_filename);
         }
         // 字符串
         if (m_curChar == '"')
@@ -498,8 +502,8 @@ CToken CLexer::get_next_token()
             return str();
         }
         // 字母 下划线 或 $
-		if (m_curChar >= 'a' && m_curChar <= 'z' 
-			|| m_curChar >= 'A' && m_curChar <= 'Z' 
+		if (m_curChar >= 'a' && m_curChar <= 'z'
+			|| m_curChar >= 'A' && m_curChar <= 'Z'
 			|| m_curChar == '_' || m_curChar == '$')
 		{
 			//标识符
@@ -515,98 +519,95 @@ CToken CLexer::get_next_token()
         {
             advance();
             advance();
-            return makeToken(AND, "&&", m_nLineNo, m_nColumn, m_strFilename);
+            return createToken(TokenKind::And, "&&", m_lineNo, m_column, m_filename);
         }
         // 或 ||
         if (m_curChar == '|' && peek() == '|')
         {
             advance();
             advance();
-            return makeToken(OR, "||", m_nLineNo, m_nColumn, m_strFilename);
+            return createToken(TokenKind::Or, "||", m_lineNo, m_column, m_filename);
         }
 
         // 左移 <<
-        if (m_curChar == '<' && peek() == '<' && peek_two() != '=')
+        if (m_curChar == '<' && peek() == '<' && peekTwo() != '=')
         {
-            DEBUG_MSG("left shift <<\r\n");
             advance();
             advance();
-            return makeToken(LEFT_SHIFT, "<<", m_nLineNo, m_nColumn, m_strFilename);
+            return createToken(TokenKind::LeftShift, "<<", m_lineNo, m_column, m_filename);
         }
         // 右移 >>
-        if (m_curChar == '>' && peek() == '>' && peek_two() != '=')
+        if (m_curChar == '>' && peek() == '>' && peekTwo() != '=')
         {
-            DEBUG_MSG("right shift >>\r\n");
             advance();
             advance();
-            return makeToken(RIGHT_SHIFT, ">>", m_nLineNo, m_nColumn, m_strFilename);
+            return createToken(TokenKind::RightShift, ">>", m_lineNo, m_column, m_filename);
         }
-
         // 等于 ==
         if (m_curChar == '=' && peek() == '=')
         {
             advance();
             advance();
-            return makeToken(EQUAL, "==", m_nLineNo, m_nColumn, m_strFilename);
+            return createToken(TokenKind::Equal, "==", m_lineNo, m_column, m_filename);
         }
         // 不等于 !=
         if (m_curChar == '!' && peek() == '=')
         {
             advance();
             advance();
-            return makeToken(NOT_EQUAL, "!=", m_nLineNo, m_nColumn, m_strFilename);
+            return createToken(TokenKind::NotEqual, "!=", m_lineNo, m_column, m_filename);
         }
         // 大于等于 >=
         if (m_curChar == '>'&& peek() == '=')
         {
             advance();
             advance();
-            return makeToken(GREATER_EQUAL, ">=", m_nLineNo, m_nColumn, m_strFilename);
+            return createToken(TokenKind::GreaterEqual, ">=", m_lineNo, m_column, m_filename);
         }
         // 小于等于 <=
         if (m_curChar == '<'&& peek() == '=')
         {
             advance();
             advance();
-            return makeToken(LESS_EQUAL, "<=", m_nLineNo, m_nColumn, m_strFilename);
+            return createToken(TokenKind::LessEqual, "<=", m_lineNo, m_column, m_filename);
         }
         // 大于 >
         if (m_curChar == '>' && peek() != '>')
         {
             advance();
-            return makeToken(GREATER, ">", m_nLineNo, m_nColumn, m_strFilename);
+            return createToken(TokenKind::Greater, ">", m_lineNo, m_column, m_filename);
         }
         // 小于 <
         if (m_curChar == '<' && peek() != '<')
         {
             advance();
-            return makeToken(LESS, "<", m_nLineNo, m_nColumn, m_strFilename);
+            return createToken(TokenKind::Less, "<", m_lineNo, m_column, m_filename);
         }
         // 赋值 =
         if (m_curChar == '=')
         {
             advance();
-            return makeToken(ASSIGN, "=", m_nLineNo, m_nColumn, m_strFilename);
+            return createToken(TokenKind::Assign, "=", m_lineNo, m_column, m_filename);
         }
         // 非 !
         if (m_curChar == '!')
         {
             advance();
-            return makeToken(NOT, "!", m_nLineNo, m_nColumn, m_strFilename);
+            return createToken(TokenKind::Not, "!", m_lineNo, m_column, m_filename);
         }
         // 自增 ++
         if (m_curChar == '+' && peek() == '+')
         {
             advance();
             advance();
-            return makeToken(PLUS_PLUS, "++", m_nLineNo, m_nColumn, m_strFilename);
+            return createToken(TokenKind::PlusPlus, "++", m_lineNo, m_column, m_filename);
         }
         // 自减 --
         if (m_curChar == '-' && peek() == '-')
         {
             advance();
             advance();
-            return makeToken(MINUS_MINUS, "--", m_nLineNo, m_nColumn, m_strFilename);
+            return createToken(TokenKind::MinusMinus, "--", m_lineNo, m_column, m_filename);
         }
 
         // 加等于 +=
@@ -614,52 +615,52 @@ CToken CLexer::get_next_token()
         {
             advance();
             advance();
-            return makeToken(PLUS_EQUAL, "+=", m_nLineNo, m_nColumn, m_strFilename);
+            return createToken(TokenKind::PlusEqual, "+=", m_lineNo, m_column, m_filename);
         }
         // 减等于 -=
         if (m_curChar == '-' && peek() == '=')
         {
             advance();
             advance();
-            return makeToken(MINUS_EQUAL, "-=", m_nLineNo, m_nColumn, m_strFilename);
+            return createToken(TokenKind::MinusEqual, "-=", m_lineNo, m_column, m_filename);
         }
         // 乘等于 *=
         if (m_curChar == '*' && peek() == '=')
         {
             advance();
             advance();
-            return makeToken(MUL_EQUAL, "*=", m_nLineNo, m_nColumn, m_strFilename);
+            return createToken(TokenKind::MulEqual, "*=", m_lineNo, m_column, m_filename);
         }
         // 除等于 /=
         if (m_curChar == '/' && peek() == '=')
         {
             advance();
             advance();
-            return makeToken(DIV_EQUAL, "/=", m_nLineNo, m_nColumn, m_strFilename);
+            return createToken(TokenKind::DivEqual, "/=", m_lineNo, m_column, m_filename);
         }
         // 取模等于 %=
         if (m_curChar == '%' && peek() == '=')
         {
             advance();
             advance();
-            return makeToken(MOD_EQUAL, "%=", m_nLineNo, m_nColumn, m_strFilename);
+            return createToken(TokenKind::ModEqual, "%=", m_lineNo, m_column, m_filename);
         }
 
         // 左移等于 <<=
-        if (m_curChar == '<' && peek() == '<' && peek_two() == '=')
+        if (m_curChar == '<' && peek() == '<' && peekTwo() == '=')
         {
             advance();
             advance();
             advance();
-            return makeToken(LEFT_SHIFT_EQUAL, "<<=", m_nLineNo, m_nColumn, m_strFilename);
+            return createToken(TokenKind::LeftShiftEqual, "<<=", m_lineNo, m_column, m_filename);
         }
         // 右移等于 >>=
-        if (m_curChar == '>' && peek() == '>' && peek_two() == '=')
+        if (m_curChar == '>' && peek() == '>' && peekTwo() == '=')
         {
             advance();
             advance();
             advance();
-            return makeToken(RIGHT_SHIFT_EQUAL, ">>=", m_nLineNo, m_nColumn, m_strFilename);
+            return createToken(TokenKind::RightShiftEqual, ">>=", m_lineNo, m_column, m_filename);
         }
 
         // 按位与等于 &=
@@ -667,127 +668,127 @@ CToken CLexer::get_next_token()
         {
             advance();
             advance();
-            return makeToken(BITWISE_AND_EQUAL, "&=", m_nLineNo, m_nColumn, m_strFilename);
+            return createToken(TokenKind::BitwiseAndEqual, "&=", m_lineNo, m_column, m_filename);
         }
         // 按位或等于 |=
         if (m_curChar == '|' && peek() == '=')
         {
             advance();
             advance();
-            return makeToken(BITWISE_OR_EQUAL, "|=", m_nLineNo, m_nColumn, m_strFilename);
+            return createToken(TokenKind::BitwiseOrEqual, "|=", m_lineNo, m_column, m_filename);
         }
         // 按位异或等于 ^=
         if (m_curChar == '^' && peek() == '=')
         {
             advance();
             advance();
-            return makeToken(BITWISE_XOR_EQUAL, "^=", m_nLineNo, m_nColumn, m_strFilename);
+            return createToken(TokenKind::BitwiseXorEqual, "^=", m_lineNo, m_column, m_filename);
         }
         // 按位取反等于 ~=
         if (m_curChar == '~' && peek() == '=')
         {
             advance();
             advance();
-            return makeToken(BITWISE_NOT_EQUAL, "~=", m_nLineNo, m_nColumn, m_strFilename);
+            return createToken(TokenKind::BitwiseNotEqual, "~=", m_lineNo, m_column, m_filename);
         }
 
         // 加 +
         if (m_curChar == '+')
         {
             advance();
-            return makeToken(PLUS, "+", m_nLineNo, m_nColumn, m_strFilename);
+            return createToken(TokenKind::Plus, "+", m_lineNo, m_column, m_filename);
         }
         // 减 -
         if (m_curChar == '-')
         {
             advance();
-            return makeToken(MINUS, "-", m_nLineNo, m_nColumn, m_strFilename);
+            return createToken(TokenKind::Minus, "-", m_lineNo, m_column, m_filename);
         }
         // 乘 *
         if (m_curChar == '*')
         {
             advance();
-            return makeToken(MUL, "*", m_nLineNo, m_nColumn, m_strFilename);
+            return createToken(TokenKind::Mul, "*", m_lineNo, m_column, m_filename);
         }
         // 除 /
         if (m_curChar == '/')
         {
             advance();
-            return makeToken(DIV, "/", m_nLineNo, m_nColumn, m_strFilename);
+            return createToken(TokenKind::Div, "/", m_lineNo, m_column, m_filename);
         }
         // 取模 %
         if (m_curChar == '%')
         {
             advance();
-            return makeToken(MOD, "%", m_nLineNo, m_nColumn, m_strFilename);
+            return createToken(TokenKind::Mod, "%", m_lineNo, m_column, m_filename);
         }
 
         // 按位与 &
         if (m_curChar == '&' && peek() != '&')
         {
             advance();
-            return makeToken(BITWISE_AND, "&", m_nLineNo, m_nColumn, m_strFilename);
+            return createToken(TokenKind::BitwiseAnd, "&", m_lineNo, m_column, m_filename);
         }
         // 按位或 |
         if (m_curChar == '|' && peek() != '|')
         {
             advance();
-            return makeToken(BITWISE_OR, "|", m_nLineNo, m_nColumn, m_strFilename);
+            return createToken(TokenKind::BitwiseOr, "|", m_lineNo, m_column, m_filename);
         }
         // 按位异或 ^
         if (m_curChar == '^')
         {
             advance();
-            return makeToken(BITWISE_XOR, "^", m_nLineNo, m_nColumn, m_strFilename);
+            return createToken(TokenKind::BitwiseXor, "^", m_lineNo, m_column, m_filename);
         }
         // 按位取反 ~
         if (m_curChar == '~')
         {
             advance();
-            return makeToken(BITWISE_NOT, "~", m_nLineNo, m_nColumn, m_strFilename);
+            return createToken(TokenKind::BitwiseNot, "~", m_lineNo, m_column, m_filename);
         }
-        
+
         // 左括号 (
         if (m_curChar == '(')
         {
             advance();
-            return makeToken(LPAREN, "(", m_nLineNo, m_nColumn, m_strFilename);
+            return createToken(TokenKind::LParen, "(", m_lineNo, m_column, m_filename);
         }
         // 右括号 )
         if (m_curChar == ')')
         {
             advance();
-            return makeToken(RPAREN, ")", m_nLineNo, m_nColumn, m_strFilename);
+            return createToken(TokenKind::RParen, ")", m_lineNo, m_column, m_filename);
         }
         // 分号 ;
         if (m_curChar == ';')
         {
             advance();
-            return makeToken(SEMI, ";", m_nLineNo, m_nColumn, m_strFilename);
+            return createToken(TokenKind::Semi, ";", m_lineNo, m_column, m_filename);
         }
         // 逗号 ,
         if (m_curChar == ',')
         {
             advance();
-            return makeToken(COMMA, ",", m_nLineNo, m_nColumn, m_strFilename);
+            return createToken(TokenKind::Comma, ",", m_lineNo, m_column, m_filename);
         }
         // 冒号 :
         if (m_curChar == ':')
         {
             advance();
-            return makeToken(COLON, ":", m_nLineNo, m_nColumn, m_strFilename);
+            return createToken(TokenKind::Colon, ":", m_lineNo, m_column, m_filename);
         }
         // 点 .
         if (m_curChar == '.')
         {
             advance();
-            return makeToken(DOT, ".", m_nLineNo, m_nColumn, m_strFilename);
+            return createToken(TokenKind::Dot, ".", m_lineNo, m_column, m_filename);
         }
         // 井号 #
         if (m_curChar == '#')
         {
             advance();
-            return makeToken(SHARP, "#", m_nLineNo, m_nColumn, m_strFilename);
+            return createToken(TokenKind::Sharp, "#", m_lineNo, m_column, m_filename);
         }
 
         error();
@@ -795,12 +796,14 @@ CToken CLexer::get_next_token()
     }
 
     // 到达文件结尾
-    return makeToken(EOFI, "", m_nLineNo, m_nColumn, m_strFilename);
+    return createToken(TokenKind::Eof, "", m_lineNo, m_column, m_filename);
 }
 
 /* 辅助函数：创建token并计数 */
-CToken CLexer::makeToken(KEYWORD type, const string& value, int lineNo, int column, const string& filename)
+Token Lexer::createToken(TokenKind type, const string& value, int lineNo, int column, const string& filename)
 {
     m_tokenCount++;
-    return CToken(type, value, lineNo, column, filename);
+    return Token(type, value, lineNo, column, filename);
 }
+
+} // namespace loong
