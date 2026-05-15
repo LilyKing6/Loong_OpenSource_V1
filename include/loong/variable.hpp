@@ -132,8 +132,21 @@ public:
     bool operator<(const Variable& right) const;
 
 private:
+    void initDefault();
+    Int truthiness() const;
+    Variable arithOp(const Variable& right, auto&& intFn, auto&& floatFn) const;
+    Variable compareOp(const Variable& right, auto&& cmp) const;
+    Variable bitwiseOp(const Variable& right, auto&& fn) const;
+    Variable unaryBitOp(auto&& fn) const;
+    bool checkDivZero(const Variable& right);
+
     void increaseRefCount();
     void decreaseRefCount();
+
+    template<typename T>
+    static void incRef(std::map<T*, int>& refs, T* ptr);
+    template<typename T>
+    static void decRef(std::map<T*, int>& refs, T* ptr, auto&& deleter);
 
 // reference count tables for heap-allocated objects
     static std::map<std::vector<Variable>*, int> s_arrayRefCount;
