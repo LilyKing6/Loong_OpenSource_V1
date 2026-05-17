@@ -23,6 +23,7 @@ public:
     void skipComment();
     void skipCommentBlock();
     void skipWhitespaceAndComments();
+    char peekChar(int offset) const;
     char peek();
     char peekTwo();
 // consume and return the next token
