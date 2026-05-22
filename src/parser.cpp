@@ -476,36 +476,34 @@ AstNode* Parser::functionExec()
 	return node;
 }
 
-AstNode* Parser::program()
+void Parser::parseTopLevelDecls(vector<AstNode*>& globals, const string& curdir)
 {
-	vector<AstNode*> globals;
-
-	while (m_currentToken.type() == TokenKind::Function || 
+	while (m_currentToken.type() == TokenKind::Function ||
 		m_currentToken.type() == TokenKind::Sharp ||
 		m_currentToken.type() == TokenKind::Class ||
 		m_currentToken.type() == TokenKind::Static ||
 		m_currentToken.type() == TokenKind::Id)
 	{
-
 		AstNode* node = nullptr;
 		if (m_currentToken.type() == TokenKind::Sharp)
 		{
 			consume(TokenKind::Sharp);
-			if (m_currentToken.type() == TokenKind::Id && (m_currentToken.value() == "include" || m_currentToken.value() == "import"))
+			if (m_currentToken.type() == TokenKind::Id &&
+				(m_currentToken.value() == "include" || m_currentToken.value() == "import"))
 			{
 				string keyword = m_currentToken.value();
 				consume(TokenKind::Id);
 				string filename = m_currentToken.value();
 				consume(TokenKind::String);
 				string filecontent;
-				
-				if (keyword == "include") 
+
+				if (keyword == "include")
 				{
 					filecontent = Tool::readFile(filename);
 					if (filecontent.size() == 0)
 					{
-						if (m_curdir.size() > 0)
-							filename = m_curdir + filename;
+						if (curdir.size() > 0)
+							filename = curdir + filename;
 						filecontent = Tool::readFile(filename);
 						if (filecontent.size() == 0)
 						{
@@ -519,8 +517,8 @@ AstNode* Parser::program()
 					filecontent = Tool::readFileFromHeaderDir(filename);
 					if (filecontent.size() == 0)
 					{
-						if (m_curdir.size() > 0)
-							filename = m_curdir + filename;
+						if (curdir.size() > 0)
+							filename = curdir + filename;
 						filecontent = Tool::readFile(filename);
 						if (filecontent.size() == 0)
 						{
@@ -537,31 +535,29 @@ AstNode* Parser::program()
 					parseContent(filecontent, globals, filename);
 					m_globalData->globals()[strKeyname] = true;
 				}
-
 			}
 			else
 			{
-				error("error include/import");
+				error("error preprocessor");
 				break;
 			}
 		}
-
-		else if(m_currentToken.type() == TokenKind::Id)
+		else if (m_currentToken.type() == TokenKind::Id)
 		{
 			node = expr();
 			if (node->type() != AstNode::Type::Assign)
 			{
-				error("error defination");
+				error("error assign");
 				break;
 			}
-			VarRef* var=(VarRef*)((AssignExpr*)node)->left();
-			if (var->type()!=AstNode::Type::Var)
+			VarRef* var = (VarRef*)((AssignExpr*)node)->left();
+			if (var->type() != AstNode::Type::Var)
 			{
 				error("error variable");
 				break;
 			}
 			var->setGlobal(true);
-			m_globalData->globals()[var->value()]=true;
+			m_globalData->globals()[var->value()] = true;
 			consume(TokenKind::Semi);
 			globals.push_back(node);
 		}
@@ -569,7 +565,7 @@ AstNode* Parser::program()
 		{
 			consume(TokenKind::Static);
 			if (m_currentToken.type() == TokenKind::Function)
-				node = function("",true);
+				node = function("", true);
 			else if (m_currentToken.type() == TokenKind::Class)
 				node = classDef(true);
 			else
@@ -577,7 +573,7 @@ AstNode* Parser::program()
 				node = expr();
 				if (node->type() != AstNode::Type::Assign)
 				{
-					error("error defination");
+					error("error assign");
 					break;
 				}
 				VarRef* var = (VarRef*)((AssignExpr*)node)->left();
@@ -604,6 +600,12 @@ AstNode* Parser::program()
 		if (m_currentToken.type() == TokenKind::Semi)
 			consume(TokenKind::Semi);
 	}
+}
+
+AstNode* Parser::program()
+{
+	vector<AstNode*> globals;
+	parseTopLevelDecls(globals, m_curdir);
 
 	consume(TokenKind::Program);
 	consume(TokenKind::LParen);
@@ -1112,179 +1114,58 @@ AstNode* Parser::termSquareDot()
 
 }
 
-AstNode* Parser::termNot()
+AstNode* Parser::parseBinaryExpr(int level)
 {
-    if (m_currentToken.type() == TokenKind::Not)
+    static const struct { vector<TokenKind> ops; } table[] = {
+        { {TokenKind::Or} },
+        { {TokenKind::And} },
+        { {TokenKind::BitwiseOr} },
+        { {TokenKind::BitwiseXor} },
+        { {TokenKind::BitwiseAnd} },
+        { {TokenKind::Equal, TokenKind::NotEqual} },
+        { {TokenKind::Greater, TokenKind::Less, TokenKind::GreaterEqual, TokenKind::LessEqual} },
+        { {TokenKind::RightShift} },
+        { {TokenKind::LeftShift} },
+        { {TokenKind::Plus, TokenKind::Minus} },
+        { {TokenKind::Mul, TokenKind::Div, TokenKind::Mod} },
+    };
+    constexpr int maxLevel = sizeof(table) / sizeof(table[0]) - 1;
+
+    if (level > maxLevel)
+    {
+        if (m_currentToken.type() == TokenKind::Not)
+        {
+            Token token = m_currentToken;
+            consume(token.type());
+            AstNode* nullNode = createNode(new NoOp());
+            return createNode(new BinOp(nullNode, token, parseBinaryExpr(level)));
+        }
+        if (m_currentToken.type() == TokenKind::BitwiseNot)
+        {
+            Token token = m_currentToken;
+            consume(token.type());
+            AstNode* nullNode = createNode(new NoOp());
+            return createNode(new BinOp(nullNode, token, parseBinaryExpr(level)));
+        }
+        return termSquareDot();
+    }
+
+    AstNode* node = parseBinaryExpr(level + 1);
+    const auto& ops = table[level].ops;
+    while (std::find(ops.begin(), ops.end(), m_currentToken.type()) != ops.end())
     {
         Token token = m_currentToken;
         consume(token.type());
-        AstNode* nullNode = createNode(new NoOp());
-        AstNode* node = createNode(new BinOp(nullNode, token, termSquareDot()));
-        return  node;
-    }
-
-    AstNode* node = termSquareDot();
-    return node;
-}
-AstNode* Parser::termBitwiseNot()
-{
-    if (m_currentToken.type() == TokenKind::BitwiseNot)
-    {
-        Token token = m_currentToken;
-        consume(token.type());
-        AstNode* nullNode = createNode(new NoOp());
-        AstNode* node = createNode(new BinOp(nullNode, token, termNot()));
-        return node;
-    }
-
-    AstNode* node = termNot();
-    return node;
-}
-
-AstNode* Parser::termMulDiv()
-{
-    AstNode* node = termBitwiseNot();
-    while (m_currentToken.type() == TokenKind::Mul ||
-        m_currentToken.type() == TokenKind::Div ||
-        m_currentToken.type() == TokenKind::Mod 
-        )
-    {
-        Token token = m_currentToken;
-        consume(token.type());
-        node = createNode(new BinOp(node, token, termBitwiseNot()));
-    }
-
-    return node;
-
-}
-AstNode* Parser::termPlusMinus()
-{
-    AstNode* node = termMulDiv();
-    while (m_currentToken.type() == TokenKind::Plus ||
-        m_currentToken.type() == TokenKind::Minus
-        )
-    {
-        Token token = m_currentToken;
-        consume(token.type());
-        node = createNode(new BinOp(node, token, termMulDiv()));
-    }
-
-    return node;
-}
-
-AstNode* Parser::termLeftShift()
-{
-    AstNode* node = termPlusMinus();
-    while (m_currentToken.type() == TokenKind::LeftShift)
-    {
-        Token token = m_currentToken;
-        consume(TokenKind::LeftShift);
-        node = createNode(new BinOp(node, token, termPlusMinus()));
+        node = createNode(new BinOp(node, token, parseBinaryExpr(level + 1)));
     }
     return node;
 }
 
-AstNode* Parser::termRightShift()
-{
-    AstNode* node = termLeftShift();
-    while (m_currentToken.type() == TokenKind::RightShift)
-    {
-        Token token = m_currentToken;
-        consume(TokenKind::RightShift);
-        node = createNode(new BinOp(node, token, termLeftShift()));
-    }
-    return node;
-}
-
-AstNode* Parser::termComparison()
-{
-    AstNode* node = termRightShift();
-    while (m_currentToken.type() == TokenKind::Greater ||
-        m_currentToken.type() == TokenKind::Less ||
-        m_currentToken.type() == TokenKind::GreaterEqual ||
-        m_currentToken.type() == TokenKind::LessEqual
-        )
-    {
-        Token token = m_currentToken;
-        consume(token.type());
-        node = createNode(new BinOp(node, token, termRightShift()));
-    }
-
-    return node;
-}
-AstNode* Parser::termEqual()
-{
-    AstNode* node = termComparison();
-    while (m_currentToken.type() == TokenKind::Equal ||
-        m_currentToken.type() == TokenKind::NotEqual
-        )
-    {
-        Token token = m_currentToken;
-        consume(token.type());
-        node = createNode(new BinOp(node, token, termComparison()));
-    }
-
-    return node;
-}
-
-AstNode* Parser::termBitwiseAnd()
-{
-    AstNode* node = termEqual();
-    while (m_currentToken.type() == TokenKind::BitwiseAnd)
-    {
-        Token token = m_currentToken;
-        consume(TokenKind::BitwiseAnd);
-        node = createNode(new BinOp(node, token, termEqual()));
-    }
-    return node;
-}
-AstNode* Parser::termBitwiseXor()
-{
-    AstNode* node = termBitwiseAnd();
-    while (m_currentToken.type() == TokenKind::BitwiseXor)
-    {
-        Token token = m_currentToken;
-        consume(TokenKind::BitwiseXor);
-        node = createNode(new BinOp(node, token, termBitwiseAnd()));
-    }
-    return node;
-}
-AstNode* Parser::termBitwiseOr()
-{
-    AstNode* node = termBitwiseXor();
-    while (m_currentToken.type() == TokenKind::BitwiseOr)
-    {
-        Token token = m_currentToken;
-        consume(TokenKind::BitwiseOr);
-        node = createNode(new BinOp(node, token, termBitwiseXor()));
-    }
-    return node;
-}
-
-AstNode* Parser::termAnd()
-{
-    AstNode* node = termBitwiseOr();
-    while (m_currentToken.type() == TokenKind::And)
-    {
-        Token token = m_currentToken;
-        consume(token.type());
-        node = createNode(new BinOp(node, token, termBitwiseOr()));
-    }
-
-    return node;
-}
 AstNode* Parser::termOr()
 {
-    AstNode* node = termAnd();
-    while (m_currentToken.type() == TokenKind::Or)
-    {
-        Token token = m_currentToken;
-        consume(token.type());
-        node = createNode(new BinOp(node, token, termAnd()));
-    }
-
-    return node;
+    return parseBinaryExpr(0);
 }
+
 AstNode* Parser::termPlusPlus()
 {
     AstNode* node = termOr();

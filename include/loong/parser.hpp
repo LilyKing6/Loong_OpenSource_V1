@@ -79,21 +79,11 @@ private:
     AstNode* arrayDict(const Token& prevToken);
     AstNode* assignmentArrayDict(const Token& prevToken, const Token& token, AstNode* left);
     AstNode* factor();
-    AstNode* termBitwiseAnd();
-    AstNode* termBitwiseXor();
-    AstNode* termBitwiseOr();
-    AstNode* termBitwiseNot();
-    AstNode* termLeftShift();
-    AstNode* termRightShift();
     AstNode* termSquareDot();
-    AstNode* termNot();
-    AstNode* termMulDiv();
-    AstNode* termPlusMinus();
-    AstNode* termComparison();
-    AstNode* termEqual();
-    AstNode* termAnd();
     AstNode* termOr();
+    AstNode* parseBinaryExpr(int level);
     AstNode* termPlusPlus();
+    void parseTopLevelDecls(std::vector<AstNode*>& globals, const std::string& curdir);
     AstNode* expr();
     AstNode* variable();
 
