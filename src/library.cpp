@@ -75,11 +75,11 @@ string Tool::formatString(string& format, vector<Variable>& vecArgs)
 				pos += strlen(buff);
 				index++;
 			}
-			else if (format[tPos] == 'd')
+			else if (format[tPos] == 'd' || format[tPos] == 'x' || format[tPos] == 'X' || format[tPos] == 'o')
 			{
 				string fmt = format.substr(pos, tPos - pos + 1);
 				size_t fmt_size = fmt.size();
-				if (sizeof(Int) == 8)
+				if (format[tPos] == 'd' && sizeof(Int) == 8)
 					fmt.replace(fmt_size - 1, 1, "lld");
 
 				if (index >= vecArgs.size())
@@ -94,25 +94,6 @@ string Tool::formatString(string& format, vector<Variable>& vecArgs)
 				else if (vecArgs[index].type() == Variable::VarType::String)
 					sprintf(buff, fmt.c_str(), vecArgs[index].stringValue()[0]);
 				format.replace(pos, fmt_size, buff);
-				pos += strlen(buff);
-				index++;
-			}
-			else if (format[tPos] == 'x' || format[tPos] == 'X' || format[tPos] == 'o')
-			{
-				string fmt = format.substr(pos, tPos - pos + 1);
-
-				if (index >= vecArgs.size())
-					return err1;
-				if (vecArgs[index].type() != Variable::VarType::Int && vecArgs[index].type() != Variable::VarType::String)
-					return err2;
-				if (vecArgs[index].type() == Variable::VarType::String && vecArgs[index].stringValue().size() != 1)
-					return err2;
-				char buff[1024];
-				if (vecArgs[index].type() == Variable::VarType::Int)
-					sprintf(buff, fmt.c_str(), vecArgs[index].intValue());
-				else if (vecArgs[index].type() == Variable::VarType::String)
-					sprintf(buff, fmt.c_str(), vecArgs[index].stringValue()[0]);
-				format.replace(pos, fmt.size(), buff);
 				pos += strlen(buff);
 				index++;
 			}
@@ -956,7 +937,7 @@ bool ArrayLib::callMember(const string& name, Variable& var, vector<Variable>& a
 			return true;
 		}
 		else
-			error("restore() arguments number error\r\n");
+			error("sort() arguments number error\r\n");
 	}
 	if (itr->second == LibraryBase::LibMember::Sort)
 	{
@@ -970,7 +951,7 @@ bool ArrayLib::callMember(const string& name, Variable& var, vector<Variable>& a
 			return true;
 		}
 		else
-			error("restore() arguments number error\r\n");
+			error("swap() arguments number error\r\n");
 	}
 	if (itr->second == LibraryBase::LibMember::Swap)
 	{
@@ -983,7 +964,7 @@ bool ArrayLib::callMember(const string& name, Variable& var, vector<Variable>& a
 			return true;
 		}
 		else
-			error("restore() arguments number error\r\n");
+			error("create2d() arguments number error\r\n");
 	}
 	if (itr->second == LibraryBase::LibMember::Create2D)
 	{
@@ -1054,7 +1035,7 @@ bool ArrayLib::callMember(const string& name, Variable& var, vector<Variable>& a
 			return true;
 		}
 		else
-			error("restore() arguments number error\r\n");
+			error("create3d() arguments number error\r\n");
 	}
 
 	return false;
@@ -1442,7 +1423,7 @@ bool ClassLib::callMember(const string& name, Variable& var, const vector<Variab
 			}
 		}
 		else
-			error("restore() arguments number error\r\n");
+			error("create3d() arguments number error\r\n");
 	}
 
 	return false;
@@ -1453,290 +1434,134 @@ bool Func::callFunc(const vector<Variable>& args, Variable& ret)
 	if (args.size() == 0)
 		return false;
 
-	if (args[0].stringValue() == "fopen")
-	{
-		if (args.size() == 3)
-		{
-			Variable filename = args[1];
-			Variable mode = args[2];
-			if (filename.type() == Variable::VarType::String && mode.type() == Variable::VarType::String)
-			{
+	using Handler = bool(*)(const vector<Variable>&, Variable&);
+	static const map<string, Handler> dispatch = {
+		{"fopen",      [](const vector<Variable>& a, Variable& r) -> bool {
+			if (a.size() != 3) return false;
+			if (a[1].type() == Variable::VarType::String && a[2].type() == Variable::VarType::String) {
 				File file;
-				void* handle = file.open(filename.stringValue().c_str(), mode.stringValue().c_str());
-				if (handle)
-				{
-					ret.setType(Variable::VarType::Pointer);
-					ret.setPointer(handle);
-					return true;
-				}
+				void* handle = file.open(a[1].stringValue().c_str(), a[2].stringValue().c_str());
+				if (handle) { r.setType(Variable::VarType::Pointer); r.setPointer(handle); return true; }
 			}
-		}
-		return false;
-	}
-	if (args[0].stringValue() == "fclose")
-	{
-		if (args.size()==2)
-		{
-			Variable handle = args[1];
-			if (handle.type() == Variable::VarType::Pointer)
-			{
-				File file;
-				file.close(handle.pointerValue());
-			}
+			return false;
+		}},
+		{"fclose",     [](const vector<Variable>& a, Variable& r) -> bool {
+			if (a.size() != 2) return false;
+			if (a[1].type() == Variable::VarType::Pointer) { File file; file.close(a[1].pointerValue()); }
 			return true;
-		}
-		return false;
-	}
-	if (args[0].stringValue() == "fremove")
-	{
-		if (args.size() == 2)
-		{
-			Variable filename = args[1];
-			if (filename.stringValue().size() >0)
-			{
-				int res=remove(filename.stringValue().c_str());
-				ret = Variable(res);
-			}
+		}},
+		{"fremove",    [](const vector<Variable>& a, Variable& r) -> bool {
+			if (a.size() != 2) return false;
+			if (a[1].stringValue().size() > 0) r = Variable(remove(a[1].stringValue().c_str()));
 			return true;
-		}
-		return false;
-	}
-	if (args[0].stringValue() == "frename")
-	{
-		if (args.size() == 3)
-		{
-			Variable filename_old = args[1];
-			Variable filename_new = args[2];
-			if (filename_old.stringValue().size() >0 && filename_new.stringValue().size() >0)
-			{
-				int res = rename(filename_old.stringValue().c_str(), filename_new.stringValue().c_str());
-				ret = Variable(res);
-			}
+		}},
+		{"frename",    [](const vector<Variable>& a, Variable& r) -> bool {
+			if (a.size() != 3) return false;
+			if (a[1].stringValue().size() > 0 && a[2].stringValue().size() > 0)
+				r = Variable(rename(a[1].stringValue().c_str(), a[2].stringValue().c_str()));
 			return true;
-		}
-		return false;
-	}
-	if (args[0].stringValue() == "fsize")
-	{
-		if (args.size() == 2)
-		{
-			Variable handle = args[1];
-			if (handle.type() == Variable::VarType::Pointer)
-			{
-				File file;
-				Int size = file.size(handle.pointerValue());
-				ret= Variable(size);
-				return true;
-			}
-		}
-		return false;
-	}
-	if (args[0].stringValue() == "fseek")
-	{
-		if (args.size() == 3)
-		{
-			Variable handle = args[1];
-			Variable pos = args[2];
-			if (handle.type() == Variable::VarType::Pointer && pos.type() == Variable::VarType::Int)
-			{
-				File file;
-				file.seek(handle.pointerValue(), pos.intValue());
-				return true;
-			}
-		}
-		return false;
-	}
-	if (args[0].stringValue() == "fread")
-	{
-		if (args.size() == 3)
-		{
-			Variable handle = args[1];
-			Variable size = args[2];
-			if (handle.type() == Variable::VarType::Pointer && size.type() == Variable::VarType::Int)
-			{
-				File file;
-				file.read(handle.pointerValue(), size.intValue(), ret);
-				return true;
-			}
-		}
-		return false;
-	}
-	if (args[0].stringValue() == "fwrite")
-	{
-		if (args.size() == 3)
-		{
-			Variable handle = args[1];
-			Variable content = args[2];
-			if (handle.type() == Variable::VarType::Pointer)
-			{
-				File file;
-				bool bret = file.write(handle.pointerValue(), content);
-				if (bret)
-					ret = Variable(1);
-				else
-					ret = Variable(0);
-				return true;
-			}
-		}
-		return false;
-	}
-
-	if (args[0].stringValue() == "time_clock")
-	{
-		if (args.size() == 1)
-		{
-			Int t = clock();
-			ret = Variable(t);
-			return true;
-		}
-	}
-	if (args[0].stringValue() == "time_now")
-	{
-		if (args.size() == 1)
-		{
-			time_t now = time(0);
-			char* dt = ctime(&now);
-			if (dt)
-			{
-				size_t dtlen = strlen(dt);
-				if (dtlen > 0 && dt[dtlen - 1]=='\n')
-					dt[dtlen - 1] = 0;
-			}
-			tm *ltm = localtime(&now);
-			Variable cvar;
-			cvar.setDict();
+		}},
+		{"fsize",      [](const vector<Variable>& a, Variable& r) -> bool {
+			if (a.size() != 2 || a[1].type() != Variable::VarType::Pointer) return false;
+			File file; r = Variable(file.size(a[1].pointerValue())); return true;
+		}},
+		{"fseek",      [](const vector<Variable>& a, Variable& r) -> bool {
+			if (a.size() != 3 || a[1].type() != Variable::VarType::Pointer || a[2].type() != Variable::VarType::Int) return false;
+			File file; file.seek(a[1].pointerValue(), a[2].intValue()); return true;
+		}},
+		{"fread",      [](const vector<Variable>& a, Variable& r) -> bool {
+			if (a.size() != 3 || a[1].type() != Variable::VarType::Pointer || a[2].type() != Variable::VarType::Int) return false;
+			File file; return file.read(a[1].pointerValue(), a[2].intValue(), r);
+		}},
+		{"fwrite",     [](const vector<Variable>& a, Variable& r) -> bool {
+			if (a.size() != 3 || a[1].type() != Variable::VarType::Pointer) return false;
+			File file; bool ok = file.write(a[1].pointerValue(), (Variable&)a[2]);
+			r = Variable(ok ? 1 : 0); return true;
+		}},
+		{"time_clock", [](const vector<Variable>& a, Variable& r) -> bool {
+			if (a.size() != 1) return false; r = Variable((Int)clock()); return true;
+		}},
+		{"time_now",   [](const vector<Variable>& a, Variable& r) -> bool {
+			if (a.size() != 1) return false;
+			time_t now = time(0); char* dt = ctime(&now);
+			if (dt) { size_t len = strlen(dt); if (len > 0 && dt[len-1] == '\n') dt[len-1] = 0; }
+			tm* ltm = localtime(&now);
+			Variable cvar; cvar.setDict();
 			(*cvar.dictValue())[Variable("time")] = Variable((Int)now);
 			(*cvar.dictValue())[Variable("time_str")] = Variable(dt);
-			(*cvar.dictValue())[Variable("year")] = Variable(1900+ltm->tm_year);
-			(*cvar.dictValue())[Variable("mon")] = Variable(1+ltm->tm_mon);
+			(*cvar.dictValue())[Variable("year")] = Variable(1900 + ltm->tm_year);
+			(*cvar.dictValue())[Variable("mon")] = Variable(1 + ltm->tm_mon);
 			(*cvar.dictValue())[Variable("day")] = Variable(ltm->tm_mday);
 			(*cvar.dictValue())[Variable("hour")] = Variable(ltm->tm_hour);
 			(*cvar.dictValue())[Variable("min")] = Variable(ltm->tm_min);
 			(*cvar.dictValue())[Variable("sec")] = Variable(ltm->tm_sec);
-			ret = cvar;
-			return true;
-		}
-	}
-	if (args[0].stringValue() == "time_rand")
-	{
-		if (args.size() == 1)
-		{
-			int a = rand();
-			ret = Variable(a);
-			return true;
-		}
-	}
-	if (args[0].stringValue() == "time_sleep")
-	{
-		if (args.size() == 2)
-		{
-			int msec = (int)args[1].intValue();
-			if (msec < 0)
-				msec = 0;
-			#ifdef _WIN32
-				Sleep(msec);
-			#else
-				usleep(msec*1000);
-			#endif
-			return true;
-		}
-	}
-	if (args[0].stringValue() == "system")
-	{
-		if (args.size() == 2)
-		{
-			const string& text = args[1].stringValue();
-			system(text.c_str());
-			return true;
-		}
-	}
-
-	if (args[0].stringValue() == "os_platform")
-	{
-		if (args.size() == 1)
-		{
-			#ifdef _WIN32
-				string platform = "WIN";
-			#else
-				#ifdef __linux__
-					string platform = "LINUX";
-				#else
-					string platform = "MAC";
-				#endif
-			#endif
-			if (sizeof(Int) == 8)
-				platform += " x64";
-			ret = Variable(platform);
-			return true;
-		}
-	}
-	if (args[0].stringValue() == "curdir")
-	{
-		if (args.size() == 1)
-		{
-			if (s_interpreter)
-				ret = Variable(s_interpreter->parser().currentDir());
-			return true;
-		}
-	}
-	if (args[0].stringValue() == "getenv")
-	{
-		if (args.size() == 2)
-		{
-			const string& text = args[1].stringValue();
-			char* pBuf = getenv(text.c_str());
-			if (pBuf)
-				ret = Variable(string(pBuf, strlen(pBuf)));
-			return true;
-		}
-	}
-	if (args[0].stringValue() == "getstdin")
-	{
-		if (args.size() == 2)
-		{
-			int nLen = (int)args[1].intValue();
-			if (nLen > 0)
-			{
+			r = cvar; return true;
+		}},
+		{"time_rand",  [](const vector<Variable>& a, Variable& r) -> bool {
+			if (a.size() != 1) return false; r = Variable(rand()); return true;
+		}},
+		{"time_sleep", [](const vector<Variable>& a, Variable& r) -> bool {
+			if (a.size() != 2) return false;
+			int msec = max(0, (int)a[1].intValue());
 #ifdef _WIN32
-				_setmode(_fileno(stdin), _O_BINARY);
+			Sleep(msec);
+#else
+			usleep(msec * 1000);
 #endif
-				char* pBuf = new char[nLen + 1];
-				int i = 0;
-				while (i < nLen)
-				{
-					int x = fgetc(stdin);
-					if(feof(stdin))
-						break;
-					pBuf[i++] = x;
-				}
-				pBuf[i] = 0;
-				if (pBuf)
-					ret = Variable(string(pBuf, i));
-				delete[]pBuf;
-				return true;
-			}
-		}
-	}
-	if (args[0].stringValue() == "putstdin")
-	{
-		if (args.size() == 2)
-		{
-			const string& strBuf = args[1].stringValue();
-			if (strBuf.size() > 0)
-			{
+			return true;
+		}},
+		{"system",     [](const vector<Variable>& a, Variable& r) -> bool {
+			if (a.size() != 2) return false; ::system(a[1].stringValue().c_str()); return true;
+		}},
+		{"os_platform", [](const vector<Variable>& a, Variable& r) -> bool {
+			if (a.size() != 1) return false;
 #ifdef _WIN32
-				_setmode(_fileno(stdout), _O_BINARY);
+			string platform = "WIN";
+#else
+#ifdef __linux__
+			string platform = "LINUX";
+#else
+			string platform = "MAC";
 #endif
-				for (size_t i = 0; i < strBuf.size(); i++)
-				{
-					fputc(strBuf[i], stdout);
-				}
-				
-				return true;
-			}
-		}
-	}
+#endif
+			if (sizeof(Int) == 8) platform += " x64";
+			r = Variable(platform); return true;
+		}},
+		{"curdir",     [](const vector<Variable>& a, Variable& r) -> bool {
+			if (a.size() != 1) return false;
+			if (s_interpreter) r = Variable(s_interpreter->parser().currentDir());
+			return true;
+		}},
+		{"getenv",     [](const vector<Variable>& a, Variable& r) -> bool {
+			if (a.size() != 2) return false;
+			char* pBuf = ::getenv(a[1].stringValue().c_str());
+			if (pBuf) r = Variable(string(pBuf, strlen(pBuf)));
+			return true;
+		}},
+		{"getstdin",   [](const vector<Variable>& a, Variable& r) -> bool {
+			if (a.size() != 2) return false;
+			int nLen = (int)a[1].intValue(); if (nLen <= 0) return false;
+#ifdef _WIN32
+			_setmode(_fileno(stdin), _O_BINARY);
+#endif
+			char* pBuf = new char[nLen + 1]; int i = 0;
+			while (i < nLen) { int x = fgetc(stdin); if (feof(stdin)) break; pBuf[i++] = x; }
+			pBuf[i] = 0; if (pBuf) r = Variable(string(pBuf, i)); delete[] pBuf; return true;
+		}},
+		{"putstdin",   [](const vector<Variable>& a, Variable& r) -> bool {
+			if (a.size() != 2) return false;
+			const string& buf = a[1].stringValue(); if (buf.empty()) return false;
+#ifdef _WIN32
+			_setmode(_fileno(stdout), _O_BINARY);
+#endif
+			for (size_t i = 0; i < buf.size(); i++) fputc(buf[i], stdout);
+			return true;
+		}},
+	};
 
+	auto it = dispatch.find(args[0].stringValue());
+	if (it != dispatch.end())
+		return it->second(args, ret);
 	return false;
 }
 
