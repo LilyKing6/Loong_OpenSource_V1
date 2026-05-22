@@ -619,52 +619,7 @@ void Interpreter::visitBlock(Block* node, Variable& result)
 
 bool Interpreter::checkCondition(Variable& condition)
 {
-	if (condition.type() == Variable::VarType::Int)
-	{
-		if (condition.intValue() != 0)
-			return true;
-		else
-			return false;
-	}
-	if (condition.type() == Variable::VarType::Float)
-	{
-		if (condition.floatValue() != 0)
-			return true;
-		else
-			return false;
-	}
-	if (condition.type() == Variable::VarType::String)
-	{
-		if (condition.stringValue().size() != 0)
-			return true;
-		else
-			return false;
-	}
-	if (condition.type() == Variable::VarType::Pointer)
-	{
-		if (condition.pointerValue() != 0)
-			return true;
-		else
-			return false;
-	}
-	if (condition.type() == Variable::VarType::Array)
-	{
-		if (condition.arrayValue()->size() != 0)
-			return true;
-		else
-			return false;
-	}
-	if (condition.type() == Variable::VarType::Dict)
-	{
-		if (condition.dictValue()->size() != 0)
-			return true;
-		else
-			return false;
-	}
-	if (condition.type() == Variable::VarType::Class)
-			return true;
-
-	return false;
+	return condition.truthiness() != 0;
 }
 void Interpreter::visitIfStmt(IfStmt* node, Variable& result)
 {
@@ -782,39 +737,10 @@ void Interpreter::visitBuiltin(BuiltinCall* node, Variable& res)
 		{
 			Variable &result=res;
 			visit(exprs[i], result);
-			if (result.type() == Variable::VarType::Int)
-				formattedPrint("%lld ", result.intValue());
-			else if (result.type() == Variable::VarType::Float)
-				formattedPrint("%f ", result.floatValue());
-			else if (result.type() == Variable::VarType::String)
-			{
-				if (m_outputFile)
-					fprintf(m_outputFile, "%s ", result.stringValue().c_str());
-				else
-					printf("%s ", result.stringValue().c_str());
-			}
-			else if (result.type() == Variable::VarType::Pointer)
-				formattedPrint("%p ", result.pointerValue());
-			else if (result.type() == Variable::VarType::Array)
-			{
+			if (result.type() == Variable::VarType::Array || result.type() == Variable::VarType::Dict)
 				printObject(result);
-			}
-			else if (result.type() == Variable::VarType::Dict)
-			{
-				printObject(result);
-			}
-			else if (result.type() == Variable::VarType::Class)
-			{
-				formattedPrint("<class %p> ", result.dictValue());
-			}
-			else if (result.type() == Variable::VarType::Empty)
-			{
-				formattedPrint("<undefined> ");
-			}
-			else if (result.type() == Variable::VarType::None)
-			{
-				formattedPrint("<null> ");
-			}
+			else
+				printVariable(result, false);
 		}
 		if (exprs.size()>0)
 			formattedPrint("\n");
@@ -1188,38 +1114,48 @@ void Interpreter::visitFunctionExec(FuncCall* node, Variable& res)
 	return execFunction(fun, node->exprs(), node->token(),res);
 }
 
-void Interpreter::execFunction(FuncDecl* fun, vector<AstNode*>& exprs, Token& token, Variable& res)
+void Interpreter::bindArgs(CallableDecl* callable, vector<AstNode*>& exprs,
+	Token& token, vector<Variable>& paramsPass)
 {
-	if (fun->type() == AstNode::Type::Empty)
-		return res.reset();
-
-	Variable &result = res;
-	vector<Variable> params_pass;
+	Variable result;
 	for (size_t i = 0; i < exprs.size(); i++)
 	{
 		visit(exprs[i], result);
 		if (result.type() == Variable::VarType::Empty)
 		{
-			error("argument value error for " + fun->name() + "\r\n", token);
-			return res.reset();
+			error("argument value error for " + callable->name() + "\r\n", token);
+			return;
 		}
 		result.index().clear();
-		params_pass.push_back(result);
+		paramsPass.push_back(result);
 	}
 
-	vector<string>& params = fun->params();
-	if (params.size() < params_pass.size())
+	vector<string>& params = callable->params();
+	if (params.size() < paramsPass.size())
 	{
-		error("argument number error for " + fun->name() + "\r\n", token);
-		return res.reset();
+		error("argument number error for " + callable->name() + "\r\n", token);
+		return;
 	}
+}
+
+void Interpreter::execFunction(FuncDecl* fun, vector<AstNode*>& exprs, Token& token, Variable& res)
+{
+	if (fun->type() == AstNode::Type::Empty)
+		return res.reset();
+
+	vector<Variable> params_pass;
+	bindArgs(fun, exprs, token, params_pass);
+	if (m_error.size() > 0)
+		return res.reset();
+
 	vector<AstNode*>& params_value = fun->paramsValue();
+	Variable &result = res;
 
 	ActivationRecord new_ar(fun->name(), "function", 2);
-	for (size_t i = 0; i < params.size(); i++)
+	for (size_t i = 0; i < fun->params().size(); i++)
 	{
-		if (i >= 0 && i<params_pass.size())
-			new_ar.setValue(params[i], params_pass[i]);
+		if (i < params_pass.size())
+			new_ar.setValue(fun->params()[i], params_pass[i]);
 		else
 		{
 			visit(params_value[i], result);
@@ -1229,7 +1165,7 @@ void Interpreter::execFunction(FuncDecl* fun, vector<AstNode*>& exprs, Token& to
 				return res.reset();
 			}
 			result.index().clear();
-			new_ar.setValue(params[i], result);
+			new_ar.setValue(fun->params()[i], result);
 		}
 	}
 
@@ -1256,33 +1192,19 @@ void Interpreter::execFunction(FuncDecl* fun, vector<AstNode*>& exprs, Token& to
 
 void Interpreter::execClass(ClassDecl* cls, vector<AstNode*>& exprs, Token& token, Variable& res)
 {
-	Variable &result=res;
 	vector<Variable> params_pass;
-	for (size_t i = 0; i < exprs.size(); i++)
-	{
-		visit(exprs[i], result);
-		if (result.type() == Variable::VarType::Empty)
-		{
-			error("argument value error for " + cls->name() + "\r\n", token);
-			return res.reset();
-		}
-		result.index().clear();
-		params_pass.push_back(result);
-	}
-
-	vector<string>& params = cls->params();
-	if (params.size() < params_pass.size())
-	{
-		error("argument number error for " + cls->name() + "\r\n", token);
+	bindArgs(cls, exprs, token, params_pass);
+	if (m_error.size() > 0)
 		return res.reset();
-	}
+
 	vector<AstNode*>& params_value = cls->paramsValue();
+	Variable &result = res;
 
 	ActivationRecord new_ar(cls->name(), "class", 2);
-	for (size_t i = 0; i < params.size(); i++)
+	for (size_t i = 0; i < cls->params().size(); i++)
 	{
-		if (i >= 0 && i<params_pass.size())
-			new_ar.setValue(params[i], params_pass[i]);
+		if (i < params_pass.size())
+			new_ar.setValue(cls->params()[i], params_pass[i]);
 		else
 		{
 			visit(params_value[i], result);
@@ -1292,7 +1214,7 @@ void Interpreter::execClass(ClassDecl* cls, vector<AstNode*>& exprs, Token& toke
 				return res.reset();
 			}
 			result.index().clear();
-			new_ar.setValue(params[i], result);
+			new_ar.setValue(cls->params()[i], result);
 		}
 	}
 	Variable self;
@@ -1531,49 +1453,9 @@ void Interpreter::visitMember(AstNode* obj, AstNode* member, Variable& res)
 
 void Interpreter::visitNot(AstNode* node, Variable& res)
 {
-	int ret = 0;
 	Variable value;
 	visit(node, value);
-	if (value.type() == Variable::VarType::Int)
-	{
-		if (!value.intValue())
-			ret = 1;
-	}
-	else if (value.type() == Variable::VarType::Float)
-	{
-		if (!value.floatValue())
-			ret = 1;
-	}
-	else if (value.type() == Variable::VarType::None || value.type() == Variable::VarType::Empty)
-	{
-		ret = 1;
-	}
-	else if (value.type() == Variable::VarType::String)
-	{
-		if (value.stringValue().size() == 0)
-			ret = 1;
-	}
-	else if (value.type() == Variable::VarType::Array)
-	{
-		if (value.arrayValue()->size() == 0)
-			ret = 1;
-	}
-	else if (value.type() == Variable::VarType::Dict)
-	{
-		if (value.dictValue()->size() == 0)
-			ret = 1;
-	}
-	else if (value.type() == Variable::VarType::Class)
-	{
-		ret = 0;
-	}
-	else if (value.type() == Variable::VarType::Pointer)
-	{
-		if (value.pointerValue() == 0)
-			ret = 1;
-	}
-
-	res.setInt(ret);
+	res.setInt(!checkCondition(value));
 }
 
 void Interpreter::copyObject(Variable& object, Variable& newObj)
@@ -1621,6 +1503,47 @@ void Interpreter::copyObject(Variable& object, Variable& newObj)
 	newObj = object;
 }
 
+void Interpreter::printVariable(const Variable& v, bool quoteString)
+{
+	switch (v.type())
+	{
+	case Variable::VarType::Int:
+		formattedPrint("%lld ", v.intValue());
+		break;
+	case Variable::VarType::Float:
+		formattedPrint("%f ", v.floatValue());
+		break;
+	case Variable::VarType::String:
+		if (quoteString)
+			formattedPrint("\"%s\" ", v.stringValue().c_str());
+		else if (m_outputFile)
+			fprintf(m_outputFile, "%s ", v.stringValue().c_str());
+		else
+			printf("%s ", v.stringValue().c_str());
+		break;
+	case Variable::VarType::Pointer:
+		formattedPrint("%p ", v.pointerValue());
+		break;
+	case Variable::VarType::Array:
+		formattedPrint("<array %p> ", v.arrayValue());
+		break;
+	case Variable::VarType::Dict:
+		formattedPrint("<dict %p> ", v.dictValue());
+		break;
+	case Variable::VarType::Class:
+		formattedPrint("<class %p> ", v.dictValue());
+		break;
+	case Variable::VarType::Empty:
+		formattedPrint("<undefined> ");
+		break;
+	case Variable::VarType::None:
+		formattedPrint("<null> ");
+		break;
+	default:
+		break;
+	}
+}
+
 void Interpreter::printObject(Variable& object)
 {
 	if (object.type() == Variable::VarType::Array)
@@ -1636,33 +1559,7 @@ void Interpreter::printObject(Variable& object)
 			}
 			else
 			{
-				Variable& result = (*object.arrayValue())[i];
-				if (result.type() == Variable::VarType::Int)
-					formattedPrint("%lld ", result.intValue());
-				else if (result.type() == Variable::VarType::Float)
-					formattedPrint("%f ", result.floatValue());
-				else if (result.type() == Variable::VarType::String)
-				{
-					if (m_outputFile)
-						fprintf(m_outputFile, "\"%s\" ", result.stringValue().c_str());
-					else
-						printf("\"%s\" ", result.stringValue().c_str());
-				}
-				else if (result.type() == Variable::VarType::Pointer)
-					formattedPrint("%p ", result.pointerValue());
-				else if (result.type() == Variable::VarType::Class)
-				{
-					formattedPrint("<class %p> ", result.dictValue());
-				}
-				else if (result.type() == Variable::VarType::Empty)
-				{
-					formattedPrint("<undefined> ");
-				}
-				else if (result.type() == Variable::VarType::None)
-				{
-					formattedPrint("<null> ");
-				}
-
+				printVariable((*object.arrayValue())[i], true);
 			}
 			if (i< object.arrayValue()->size() - 1)
 				formattedPrint(", ");
@@ -1677,43 +1574,7 @@ void Interpreter::printObject(Variable& object)
 		map<Variable, Variable>::iterator iter = object.dictValue()->begin();
 		for (; iter != object.dictValue()->end(); iter++)
 		{
-			const Variable& result = iter->first;
-			if (result.type() == Variable::VarType::Int)
-				formattedPrint("%lld ", result.intValue());
-			else if (result.type() == Variable::VarType::Float)
-				formattedPrint("%f ", result.floatValue());
-			else if (result.type() == Variable::VarType::String)
-			{
-				if (m_outputFile)
-					fprintf(m_outputFile, "\"%s\" ", result.stringValue().c_str());
-				else
-					printf("\"%s\" ", result.stringValue().c_str());
-			}
-			else if (result.type() == Variable::VarType::Pointer)
-				formattedPrint("%p ", result.pointerValue());
-			else if (result.type() == Variable::VarType::Array)
-			{
-				Variable key = iter->first;
-				formattedPrint("<array %p> ", key.arrayValue());
-			}
-			else if (result.type() == Variable::VarType::Dict)
-			{
-				Variable key = iter->first;
-				formattedPrint("<dict %p> ", key.dictValue());
-			}
-			else if (result.type() == Variable::VarType::Class)
-			{
-				Variable key = iter->first;
-				formattedPrint("<class %p> ", key.dictValue());
-			}
-			else if (result.type() == Variable::VarType::Empty)
-			{
-				formattedPrint("<undefined> ");
-			}
-			else if (result.type() == Variable::VarType::None)
-			{
-				formattedPrint("<null> ");
-			}
+			printVariable(iter->first, true);
 
 			formattedPrint(": ");
 
@@ -1725,33 +1586,7 @@ void Interpreter::printObject(Variable& object)
 			}
 			else
 			{
-				Variable& result2 = iter->second;
-				if (result2.type() == Variable::VarType::Int)
-					formattedPrint("%lld ", result2.intValue());
-				else if (result2.type() == Variable::VarType::Float)
-					formattedPrint("%f ", result2.floatValue());
-				else if (result2.type() == Variable::VarType::String)
-				{
-					if (m_outputFile)
-						fprintf(m_outputFile, "\"%s\" ", result2.stringValue().c_str());
-					else
-						printf("\"%s\" ", result2.stringValue().c_str());
-				}
-				else if (result2.type() == Variable::VarType::Pointer)
-					formattedPrint("%p ", result2.pointerValue());
-				else if (result2.type() == Variable::VarType::Class)
-				{
-					formattedPrint("<class %p> ", result2.dictValue());
-				}
-				else if (result2.type() == Variable::VarType::Empty)
-				{
-					formattedPrint("<undefined> ");
-				}
-				else if (result2.type() == Variable::VarType::None)
-				{
-					formattedPrint("<null> ");
-				}
-
+				printVariable(iter->second, true);
 			}
 			if (i<count - 1)
 				formattedPrint(", ");

@@ -97,8 +97,10 @@ public:
     [[nodiscard]] const std::string& stringValue() const { return m_stringValue; }
     [[nodiscard]] double floatValue() const { return m_floatValue; }
     [[nodiscard]] std::vector<Variable>* arrayValue() { return m_array; }
+    [[nodiscard]] const std::vector<Variable>* arrayValue() const { return m_array; }
     void setArray(Int arrSize, std::vector<Variable>* pArray = nullptr);
     [[nodiscard]] std::map<Variable, Variable>* dictValue() { return m_dict; }
+    [[nodiscard]] const std::map<Variable, Variable>* dictValue() const { return m_dict; }
     void setDict(std::map<Variable, Variable>* pDict = nullptr);
     [[nodiscard]] VecMap& info() { return m_info; }
     void setInfo(VecMap& info);
@@ -131,6 +133,7 @@ public:
     Variable operator>>(const Variable& right);
     bool operator<(const Variable& right) const;
 
+    friend class Interpreter;
 private:
     void initDefault();
     Int truthiness() const;

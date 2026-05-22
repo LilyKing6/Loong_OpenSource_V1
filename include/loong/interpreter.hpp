@@ -61,12 +61,17 @@ private:
     void visitIndex(AstNode* obj, AstNode* idx, Variable& res);
 // handle logical not
     void visitNot(AstNode* obj, Variable& res);
+// evaluate arguments and bind to callable parameters
+    void bindArgs(CallableDecl* callable, std::vector<AstNode*>& exprs, Token& token,
+                  std::vector<Variable>& paramsPass);
 // execute a function call with argument evaluation
     void execFunction(FuncDecl* fun, std::vector<AstNode*>& exprs, Token& token, Variable& res);
 // instantiate a class with constructor arguments
     void execClass(ClassDecl* cls, std::vector<AstNode*>& exprs, Token& token, Variable& res);
 // deep-copy an object (dict) for class instances
     void copyObject(Variable& object, Variable& res);
+// format a single variable value to output
+    void printVariable(const Variable& v, bool quoteString);
 // format and output a variable for print/builtin
     void printObject(Variable& object);
 // read a value by index from array, dict, or string
