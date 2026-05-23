@@ -746,7 +746,6 @@ void Interpreter::visitBuiltin(BuiltinCall* node, Variable& res)
 	}
 	else if (node->token().value() == "_len")
 	{
-		vector<Variable> results;
 		vector<AstNode*>& exprs = node->exprs();
 		if (exprs.size()!=1)
 			error("len() takes only 1 argument.\r\n", node->token());
@@ -789,7 +788,6 @@ void Interpreter::visitBuiltin(BuiltinCall* node, Variable& res)
 	}
 	else if (node->token().value() == "_str")
 	{
-		vector<Variable> results;
 		vector<AstNode*>& exprs = node->exprs();
 		if (exprs.size() != 1)
 			error("str() takes only 1 argument.\r\n", node->token());
@@ -833,7 +831,6 @@ void Interpreter::visitBuiltin(BuiltinCall* node, Variable& res)
 	}
 	else if (node->token().value() == "_int")
 	{
-		vector<Variable> results;
 		vector<AstNode*>& exprs = node->exprs();
 		if (exprs.size() != 1)
 			error("int() takes only 1 argument.\r\n", node->token());
@@ -867,7 +864,6 @@ void Interpreter::visitBuiltin(BuiltinCall* node, Variable& res)
 	}
 	else if (node->token().value() == "_float")
 	{
-		vector<Variable> results;
 		vector<AstNode*>& exprs = node->exprs();
 		if (exprs.size() != 1)
 			error("float() takes only 1 argument.\r\n", node->token());
@@ -901,7 +897,6 @@ void Interpreter::visitBuiltin(BuiltinCall* node, Variable& res)
 	}
 	else if (node->token().value() == "_type")
 	{
-		vector<Variable> results;
 		vector<AstNode*>& exprs = node->exprs();
 		if (exprs.size() != 1)
 			error("type() takes only 1 argument.\r\n", node->token());
@@ -914,13 +909,13 @@ void Interpreter::visitBuiltin(BuiltinCall* node, Variable& res)
 			else if (result.type() == Variable::VarType::Float)
 				res = Variable("FLOAT");
 			else if (result.type() == Variable::VarType::String)
-				res = Variable("TokenKind::String");
+				res = Variable("STRING");
 			else if (result.type() == Variable::VarType::Array)
 				res = Variable("ARRAY");
 			else if (result.type() == Variable::VarType::Dict)
 				res = Variable("DICT");
 			else if (result.type() == Variable::VarType::Class)
-				res = Variable("TokenKind::Class");
+				res = Variable("CLASS");
 			else if (result.type() == Variable::VarType::Pointer)
 				res = Variable("HANDLE");
 			else if (result.type() == Variable::VarType::None)
@@ -942,13 +937,7 @@ void Interpreter::visitBuiltin(BuiltinCall* node, Variable& res)
 			visit(exprs[0], fmt);
 			if (fmt.type() == Variable::VarType::String)
 			{
-				vector<Variable> vecArgs;
-				for (size_t i = 1; i < exprs.size(); i++)
-				{
-					Variable result;
-					visit(exprs[i], result);
-					vecArgs.push_back(result);
-				}
+				vector<Variable> vecArgs = evaluateFormatArgs(exprs);
 				string format = fmt.stringValue();
 				string err=Tool::formatString(format, vecArgs);
 				if (err.size()>0)
@@ -976,13 +965,7 @@ void Interpreter::visitBuiltin(BuiltinCall* node, Variable& res)
 			visit(exprs[0], fmt);
 			if (fmt.type() == Variable::VarType::String)
 			{
-				vector<Variable> vecArgs;
-				for (size_t i = 1; i < exprs.size(); i++)
-				{
-					Variable result;
-					visit(exprs[i], result);
-					vecArgs.push_back(result);
-				}
+				vector<Variable> vecArgs = evaluateFormatArgs(exprs);
 				string format = fmt.stringValue();
 				string err;
 				if (vecArgs.size()>0)
@@ -1147,38 +1130,22 @@ void Interpreter::execFunction(FuncDecl* fun, vector<AstNode*>& exprs, Token& to
 	if (m_error.size() > 0)
 		return res.reset();
 
-	vector<AstNode*>& params_value = fun->paramsValue();
-	Variable &result = res;
-
 	ActivationRecord new_ar(fun->name(), "function", 2);
-	for (size_t i = 0; i < fun->params().size(); i++)
-	{
-		if (i < params_pass.size())
-			new_ar.setValue(fun->params()[i], params_pass[i]);
-		else
-		{
-			visit(params_value[i], result);
-			if (result.type() == Variable::VarType::Empty)
-			{
-				error("no default argument or default argument value error for " + fun->name() + "\r\n", token);
-				return res.reset();
-			}
-			result.index().clear();
-			new_ar.setValue(fun->params()[i], result);
-		}
-	}
+	bindParamsToActivationRecord(fun, params_pass, new_ar, token, res);
+	if (m_error.size() > 0)
+		return res.reset();
 
 	m_callStack.push(new_ar);
 	for (size_t i = 0; i < fun->statements().size(); i++)
 	{
-		visit(fun->statements()[i],result);
-		if (result.tag() == Variable::TagType::Return)
+		visit(fun->statements()[i],res);
+		if (res.tag() == Variable::TagType::Return)
 		{
 			m_callStack.pop();
-			result.setTag(Variable::TagType::Normal);
+			res.setTag(Variable::TagType::Normal);
 			return;
 		}
-		if (result.tag() == Variable::TagType::Break || result.tag() == Variable::TagType::Continue)
+		if (res.tag() == Variable::TagType::Break || res.tag() == Variable::TagType::Continue)
 		{
 			error("break/continue is not in loop", fun->statements()[i]->token());
 			break;
@@ -1196,26 +1163,10 @@ void Interpreter::execClass(ClassDecl* cls, vector<AstNode*>& exprs, Token& toke
 	if (m_error.size() > 0)
 		return res.reset();
 
-	vector<AstNode*>& params_value = cls->paramsValue();
-	Variable &result = res;
-
 	ActivationRecord new_ar(cls->name(), "class", 2);
-	for (size_t i = 0; i < cls->params().size(); i++)
-	{
-		if (i < params_pass.size())
-			new_ar.setValue(cls->params()[i], params_pass[i]);
-		else
-		{
-			visit(params_value[i], result);
-			if (result.type() == Variable::VarType::Empty)
-			{
-				error("no default argument or default argument value error for " + cls->name() + "\r\n", token);
-				return res.reset();
-			}
-			result.index().clear();
-			new_ar.setValue(cls->params()[i], result);
-		}
-	}
+	bindParamsToActivationRecord(cls, params_pass, new_ar, token, res);
+	if (m_error.size() > 0)
+		return res.reset();
 	Variable self;
 	self.setDict();
 	self.setType(Variable::VarType::Class);
@@ -1224,15 +1175,15 @@ void Interpreter::execClass(ClassDecl* cls, vector<AstNode*>& exprs, Token& toke
 	m_callStack.push(new_ar);
 	for (size_t i = 0; i < cls->statements().size(); i++)
 	{
-		visit(cls->statements()[i],result);
-		if (result.tag() == Variable::TagType::Return)
+		visit(cls->statements()[i],res);
+		if (res.tag() == Variable::TagType::Return)
 		{
-			result.setTag(Variable::TagType::Normal);
-			if (result.type() != Variable::VarType::None && result.type() != Variable::VarType::Empty)
+			res.setTag(Variable::TagType::Normal);
+			if (res.type() != Variable::VarType::None && res.type() != Variable::VarType::Empty)
 				error("class " + cls->name()+" cannot return non-null type \r\n", cls->token());
 			break;
 		}
-		if (result.tag() == Variable::TagType::Break || result.tag() == Variable::TagType::Continue)
+		if (res.tag() == Variable::TagType::Break || res.tag() == Variable::TagType::Continue)
 		{
 			error("break/continue is not in loop", cls->statements()[i]->token());
 			break;
@@ -1423,15 +1374,15 @@ void Interpreter::visitMember(AstNode* obj, AstNode* member, Variable& res)
 			m_callStack.push(new_ar);
 			for (size_t i = 0; i < fun->statements().size(); i++)
 			{
-				visit(fun->statements()[i],result);
+				visit(fun->statements()[i],res);
 				if (result.tag() == Variable::TagType::Return)
 				{
 					m_callStack.pop();
-					result.setTag(Variable::TagType::Normal);
+					res.setTag(Variable::TagType::Normal);
 					res = result;
 					return;
 				}
-				if (result.tag() == Variable::TagType::Break || result.tag() == Variable::TagType::Continue)
+				if (res.tag() == Variable::TagType::Break || res.tag() == Variable::TagType::Continue)
 				{
 					error("break/continue is not in loop", fun->statements()[i]->token());
 					break;
@@ -1500,6 +1451,18 @@ void Interpreter::copyObject(Variable& object, Variable& newObj)
 	}
 
 	newObj = object;
+}
+
+vector<Variable> Interpreter::evaluateFormatArgs(vector<AstNode*>& exprs)
+{
+    vector<Variable> vecArgs;
+    for (size_t i = 1; i < exprs.size(); i++)
+    {
+        Variable result;
+        visit(exprs[i], result);
+        vecArgs.push_back(result);
+    }
+    return vecArgs;
 }
 
 void Interpreter::printVariable(const Variable& v, bool quoteString)
@@ -1595,6 +1558,28 @@ void Interpreter::printObject(Variable& object)
 
 	}
 
+}
+void Interpreter::bindParamsToActivationRecord(CallableDecl* callable, std::vector<Variable>& paramsPass,
+    ActivationRecord& ar, Token& token, Variable& res)
+{
+    std::vector<AstNode*>& params_value = callable->paramsValue();
+    Variable &result = res;
+    for (size_t i = 0; i < callable->params().size(); i++)
+    {
+        if (i < paramsPass.size())
+            ar.setValue(callable->params()[i], paramsPass[i]);
+        else
+        {
+            visit(params_value[i], result);
+            if (result.type() == Variable::VarType::Empty)
+            {
+                error("no default argument or default argument value error for " + callable->name() + "\r\n", token);
+                return;
+            }
+            result.index().clear();
+            ar.setValue(callable->params()[i], result);
+        }
+    }
 }
 
 } // namespace loong

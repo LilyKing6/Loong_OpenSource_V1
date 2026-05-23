@@ -1224,12 +1224,10 @@ AstNode* Parser::termPlusPlus()
 			child_token = Token(TokenKind::BitwiseNot, "~", token.lineNo(), token.column(), token.filename());
 		else if (token.type() == TokenKind::LeftShiftEqual)
 		{
-			printf("TokenKind::LeftShiftEqual\n");
 			child_token = Token(TokenKind::LeftShift, "<<", token.lineNo(), token.column(), token.filename());
 		}
 		else if (token.type() == TokenKind::RightShiftEqual)
 		{
-			printf("TokenKind::RightShiftEqual\n");
 			child_token = Token(TokenKind::RightShift, ">>", token.lineNo(), token.column(), token.filename());
 		}
 

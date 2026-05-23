@@ -64,12 +64,17 @@ private:
 // evaluate arguments and bind to callable parameters
     void bindArgs(CallableDecl* callable, std::vector<AstNode*>& exprs, Token& token,
                   std::vector<Variable>& paramsPass);
+// bind passed parameters to activation record with defaults
+    void bindParamsToActivationRecord(CallableDecl* callable, std::vector<Variable>& paramsPass,
+                  ActivationRecord& ar, Token& token, Variable& res);
 // execute a function call with argument evaluation
     void execFunction(FuncDecl* fun, std::vector<AstNode*>& exprs, Token& token, Variable& res);
 // instantiate a class with constructor arguments
     void execClass(ClassDecl* cls, std::vector<AstNode*>& exprs, Token& token, Variable& res);
 // deep-copy an object (dict) for class instances
     void copyObject(Variable& object, Variable& res);
+// evaluate argument expressions and collect as Variable vector
+    std::vector<Variable> evaluateFormatArgs(std::vector<AstNode*>& exprs);
 // format a single variable value to output
     void printVariable(const Variable& v, bool quoteString);
 // format and output a variable for print/builtin
