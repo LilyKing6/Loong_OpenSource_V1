@@ -23,9 +23,8 @@ void Interpreter::formattedPrint(const char* format, ...)
 {
 	char buffer[1024];
 	va_list args;
-	int n;
 	va_start(args, format);
-	n = vsnprintf(buffer, 1024, format, args);
+	vsnprintf(buffer, 1024, format, args);
 	va_end(args);
 
 	if (m_outputFile)

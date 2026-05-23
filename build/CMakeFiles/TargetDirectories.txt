@@ -1,0 +1,4 @@
+D:/Projects/Loong_Opensource_Reload/loong_reload/build/CMakeFiles/loong.dir
+D:/Projects/Loong_Opensource_Reload/loong_reload/build/CMakeFiles/test_lexer.dir
+D:/Projects/Loong_Opensource_Reload/loong_reload/build/CMakeFiles/edit_cache.dir
+D:/Projects/Loong_Opensource_Reload/loong_reload/build/CMakeFiles/rebuild_cache.dir

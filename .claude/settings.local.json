@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rm -f AGENTS.md CONVERSATION_SUMMARY.md refactor.py refactor2.py test_sample.loong test_lexer.cpp build.cmd build.sh build32.cmd *.cpp)",
+      "Bash(rm -f include/*.h)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
+    ]
+  }
+}

@@ -306,9 +306,9 @@ bool File::read(void* handle, Int size, Variable& result)
 	return false;
 }
 
-bool File::write(void* handle, Variable& content)
+bool File::write(void* handle, const Variable& content)
 {
-	FILE* fp = (FILE*)handle;;
+	FILE* fp = (FILE*)handle;
 	if (fp)
 	{
 		if (content.type() == Variable::VarType::String)
@@ -1475,7 +1475,7 @@ bool Func::callFunc(const vector<Variable>& args, Variable& ret)
 		}},
 		{"fwrite",     [](const vector<Variable>& a, Variable& r) -> bool {
 			if (a.size() != 3 || a[1].type() != Variable::VarType::Pointer) return false;
-			File file; bool ok = file.write(a[1].pointerValue(), (Variable&)a[2]);
+			File file; bool ok = file.write(a[1].pointerValue(), a[2]);
 			r = Variable(ok ? 1 : 0); return true;
 		}},
 		{"time_clock", [](const vector<Variable>& a, Variable& r) -> bool {

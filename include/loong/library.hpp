@@ -40,7 +40,7 @@ public:
     void* open(const char* filename, const char* mode);
     void close(void* handle);
     bool read(void* handle, Int size, Variable& result);
-    bool write(void* handle, Variable& content);
+    bool write(void* handle, const Variable& content);
     bool seek(void* handle, Int pos);
     Int size(void* handle);
 };
