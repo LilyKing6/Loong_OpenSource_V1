@@ -84,6 +84,7 @@ private:
     AstNode* parseBinaryExpr(int level);
     AstNode* termPlusPlus();
     void parseTopLevelDecls(std::vector<AstNode*>& globals, const std::string& curdir);
+    std::string resolveIncludedFile(const std::string& keyword, const std::string& filename, const std::string& curdir);
     AstNode* expr();
     AstNode* variable();
 

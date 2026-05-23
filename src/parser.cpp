@@ -180,37 +180,11 @@ void Parser::parseContent(const string& content, vector<AstNode*>& globals, stri
 
 				string filename = parser.m_currentToken.value();
 				parser.consume(TokenKind::String);
-				string filecontent;
-
-				if (keyword == "include") 
+				string filecontent = parser.resolveIncludedFile(keyword, filename, curdir);
+				if (filecontent.size() == 0)
 				{
-					filecontent = Tool::readFile(filename);
-					if (filecontent.size() == 0)
-					{
-						if (curdir.size() > 0)
-							filename = curdir + filename;
-						filecontent = Tool::readFile(filename);
-						if (filecontent.size() == 0)
-						{
-							parser.error("error include file: " + filename);
-							break;
-						}
-					}
-				}
-				else if (keyword == "import")
-				{
-					filecontent = Tool::readFileFromHeaderDir(filename);
-					if (filecontent.size() == 0)
-					{
-						if (curdir.size() > 0)
-							filename = curdir + filename;
-						filecontent = Tool::readFile(filename);
-						if (filecontent.size() == 0)
-						{
-							parser.error("error import file: " + filename);
-							break;
-						}
-					}
+					parser.error("error " + keyword + " file: " + filename);
+					break;
 				}
 
 				string strKeyname = "#" + keyword + " " + filename;
@@ -495,37 +469,11 @@ void Parser::parseTopLevelDecls(vector<AstNode*>& globals, const string& curdir)
 				consume(TokenKind::Id);
 				string filename = m_currentToken.value();
 				consume(TokenKind::String);
-				string filecontent;
-
-				if (keyword == "include")
+				string filecontent = resolveIncludedFile(keyword, filename, curdir);
+				if (filecontent.size() == 0)
 				{
-					filecontent = Tool::readFile(filename);
-					if (filecontent.size() == 0)
-					{
-						if (curdir.size() > 0)
-							filename = curdir + filename;
-						filecontent = Tool::readFile(filename);
-						if (filecontent.size() == 0)
-						{
-							error("error include file: " + filename);
-							break;
-						}
-					}
-				}
-				else if (keyword == "import")
-				{
-					filecontent = Tool::readFileFromHeaderDir(filename);
-					if (filecontent.size() == 0)
-					{
-						if (curdir.size() > 0)
-							filename = curdir + filename;
-						filecontent = Tool::readFile(filename);
-						if (filecontent.size() == 0)
-						{
-							error("error import file: " + filename);
-							break;
-						}
-					}
+					error("error " + keyword + " file: " + filename);
+					break;
 				}
 
 				string strKeyname = "#" + keyword + " " + filename;
@@ -750,39 +698,38 @@ AstNode* Parser::statement(string classname)
 
 AstNode* Parser::includeStatement()
 {
-	vector<AstNode*> globals;
-	consume(TokenKind::Sharp);
-	if (m_currentToken.type() == TokenKind::Id && m_currentToken.value() == "include")
-	{
-		consume(TokenKind::Id);
-		string filename = m_currentToken.value();
-		consume(TokenKind::String);
-		string filecontent = Tool::readFile(filename);
-		if (filecontent.size() == 0)
-		{
-			if (m_curdir.size()>0)
-				filename = m_curdir + filename;
-			filecontent = Tool::readFile(filename);
-			if (filecontent.size() == 0)
-				error("error include file: " + filename);
-		}
-		string strKeyname = "#include " + filename;
-		Tool::strReplace(strKeyname, "/", "\\");
-		if (m_globalData->globals().find(strKeyname) == m_globalData->globals().end())
-		{
-			parseContent(filecontent, globals, filename);
-			m_globalData->globals()[strKeyname] = true;
-		}
-	}
-	else
-	{
-		error("error include");
-	}
-	AstNode* node = createNode(new IncludeStmt(m_currentToken));
-	for (size_t i = 0; i<globals.size(); i++)
-		((IncludeStmt*)node)->globals().push_back(globals[i]);
+    vector<AstNode*> globals;
+    consume(TokenKind::Sharp);
+    if (m_currentToken.type() == TokenKind::Id && m_currentToken.value() == "include")
+    {
+        consume(TokenKind::Id);
+        string filename = m_currentToken.value();
+        consume(TokenKind::String);
+        string filecontent = resolveIncludedFile("include", filename, m_curdir);
+        if (filecontent.size() == 0)
+        {
+            error("error include file: " + filename);
+        }
+        else
+        {
+            string strKeyname = "#include " + filename;
+            Tool::strReplace(strKeyname, "/", "\\");
+            if (m_globalData->globals().find(strKeyname) == m_globalData->globals().end())
+            {
+                parseContent(filecontent, globals, filename);
+                m_globalData->globals()[strKeyname] = true;
+            }
+        }
+    }
+    else
+    {
+        error("error include");
+    }
+    AstNode* node = createNode(new IncludeStmt(m_currentToken));
+    for (size_t i = 0; i<globals.size(); i++)
+        ((IncludeStmt*)node)->globals().push_back(globals[i]);
 
-	return node;
+    return node;
 }
 AstNode* Parser::importStatement()
 {
@@ -793,17 +740,20 @@ AstNode* Parser::importStatement()
         consume(TokenKind::Id);
         string filename = m_currentToken.value();
         consume(TokenKind::String);
-        string filecontent = Tool::readFileWithPriority(filename, m_curdir);
+        string filecontent = resolveIncludedFile("import", filename, m_curdir);
         if (filecontent.size() == 0)
         {
             error("error import file: " + filename);
         }
-        string strKeyname = "#import " + filename;
-        Tool::strReplace(strKeyname, "/", "\\");
-        if (m_globalData->globals().find(strKeyname) == m_globalData->globals().end())
+        else
         {
-            parseContent(filecontent, globals, filename);
-            m_globalData->globals()[strKeyname] = true;
+            string strKeyname = "#import " + filename;
+            Tool::strReplace(strKeyname, "/", "\\");
+            if (m_globalData->globals().find(strKeyname) == m_globalData->globals().end())
+            {
+                parseContent(filecontent, globals, filename);
+                m_globalData->globals()[strKeyname] = true;
+            }
         }
     }
     else
@@ -1510,6 +1460,24 @@ void  Parser::startGlobalCheck(const vector<AstNode*>& nodes)
 	}
 
 	m_globalCheck.pop();
+}
+
+std::string Parser::resolveIncludedFile(const std::string& keyword, const std::string& filename, const std::string& curdir)
+{
+    string filecontent;
+    if (keyword == "include")
+    {
+        filecontent = Tool::readFile(filename);
+        if (filecontent.size() == 0 && curdir.size() > 0)
+            filecontent = Tool::readFile(curdir + filename);
+    }
+    else if (keyword == "import")
+    {
+        filecontent = Tool::readFileFromHeaderDir(filename);
+        if (filecontent.size() == 0 && curdir.size() > 0)
+            filecontent = Tool::readFile(curdir + filename);
+    }
+    return filecontent;
 }
 
 } // namespace loong

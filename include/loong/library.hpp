@@ -22,7 +22,6 @@ public:
     static std::string formatString(std::string& format, std::vector<Variable>& args);
     static std::string readFile(const std::string& filename);
     static std::string readFileFromHeaderDir(const std::string& filename);
-    static std::string readFileWithPriority(const std::string& filename, const std::string& userDir);
     static std::string getInterpreterDir();
     static std::string urlEscape(const std::string& url);
     static std::string urlUnescape(const std::string& url);
