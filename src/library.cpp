@@ -57,25 +57,7 @@ string Tool::formatString(string& format, vector<Variable>& vecArgs)
 				delete[] buff;
 				index++;
 			}
-			else if (format[tPos] == 'c')
-			{
-				string fmt = format.substr(pos, tPos - pos + 1);
-				if (index >= vecArgs.size())
-					return err1;
-				if (vecArgs[index].type() != Variable::VarType::Int && vecArgs[index].type() != Variable::VarType::String)
-					return err2;
-				if (vecArgs[index].type() == Variable::VarType::String && vecArgs[index].stringValue().size() != 1)
-					return err2;
-				char buff[1024];
-				if (vecArgs[index].type() == Variable::VarType::Int)
-					sprintf(buff, fmt.c_str(), vecArgs[index].intValue());
-				else if (vecArgs[index].type() == Variable::VarType::String)
-					sprintf(buff, fmt.c_str(), vecArgs[index].stringValue()[0]);
-				format.replace(pos, fmt.size(), buff);
-				pos += strlen(buff);
-				index++;
-			}
-			else if (format[tPos] == 'd' || format[tPos] == 'x' || format[tPos] == 'X' || format[tPos] == 'o')
+			else if (format[tPos] == 'c' || format[tPos] == 'd' || format[tPos] == 'x' || format[tPos] == 'X' || format[tPos] == 'o')
 			{
 				string fmt = format.substr(pos, tPos - pos + 1);
 				size_t fmt_size = fmt.size();
@@ -149,22 +131,7 @@ string Tool::readFileFromHeaderDir(const string& filename)
 	return readFile(full_path);
 }
 
-string Tool::readFileWithPriority(const string& strFilename, const string& userDir)
-{
-    string filecontent = readFileFromHeaderDir(strFilename);
-    if (filecontent.size() == 0)
-    {
-        string full_path = userDir + strFilename;
-		DEBUG_VAR(full_path);
-        filecontent = readFile(full_path);
-        if (filecontent.size() == 0)
-        {
-        }
-    }
-    return filecontent;
-}
-
-string Tool::getInterpreterDir() 
+string Tool::getInterpreterDir()
 {
 #ifdef _WIN32
     wchar_t buffer[MAX_PATH];
