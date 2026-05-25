@@ -9,6 +9,8 @@ namespace loong {
 
 static std::map<std::string, Token> englishKeywordMap =
 {
+    {"program", Token(TokenKind::Program, "program", 0, 0, "")},
+    {"main", Token(TokenKind::Program, "main", 0, 0, "")},
     {"if", Token(TokenKind::If, "if", 0, 0, "")},
     {"else", Token(TokenKind::Else, "else", 0, 0, "")},
     {"while", Token(TokenKind::While, "while", 0, 0, "")},
