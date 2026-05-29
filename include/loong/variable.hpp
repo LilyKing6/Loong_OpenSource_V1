@@ -10,10 +10,10 @@
 
 namespace loong {
 
-// 64-bit integer type used throughout the interpreter
+// 解释器中使用的 64 位整数类型
 using Int = std::int64_t;
 
-// ordered key-value map backed by a vector (preserves insertion order)
+// 保持插入顺序的有序键值映射（基于 vector）
 class VecMap
 {
 public:
@@ -45,12 +45,12 @@ private:
     std::vector<std::pair<std::string, std::string>> m_data;
 };
 
-// dynamic value: string, int, float, array, dict, pointer, or class
-// uses reference counting for arrays, dicts, and pointers
+// 动态值：字符串、整数、浮点数、数组、字典、指针或类实例
+// 对数组、字典和指针使用引用计数
 class Variable
 {
 public:
-// runtime value type discriminator
+// 运行时类型标识
     enum class VarType
     {
         Empty,
@@ -64,7 +64,7 @@ public:
         Class
     };
 
-// control flow tag used during interpretation
+// 解释过程中的控制流标签
     enum class TagType
     {
         Normal,
@@ -80,9 +80,9 @@ public:
     Variable& operator=(const Variable& cv);
     Variable(const std::string& value);
     Variable(Int value);
-// construct from double, setting float type
+// 从 double 构造，设置为浮点类型
     Variable& setDouble(double value);
-// mark this variable as carrying an error
+// 将此变量标记为携带错误
     Variable& setError();
     ~Variable();
 
@@ -108,7 +108,7 @@ public:
     void setIndex(const std::vector<Variable>& index) { m_index = index; }
     [[nodiscard]] void* pointerValue() const { return m_pointer; }
     void setPointer(void* p) { m_pointer = p; }
-// initialize as a non-owning pointer reference
+// 初始化为非拥有的指针引用
     void initPointerRef(void* p);
 
     Variable operator+(const Variable& right);
@@ -151,7 +151,7 @@ private:
     template<typename T>
     static void decRef(std::map<T*, int>& refs, T* ptr, auto&& deleter);
 
-// reference count tables for heap-allocated objects
+// 堆分配对象的引用计数表
     static std::map<std::vector<Variable>*, int> s_arrayRefCount;
     static std::map<std::map<Variable, Variable>*, int> s_dictRefCount;
     static std::map<void*, int> s_pointerRefCount;

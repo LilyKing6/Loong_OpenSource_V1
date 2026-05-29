@@ -10,35 +10,35 @@
 
 namespace loong {
 
-// recursive descent parser that converts tokens into an AST
+// 递归下降解析器，将 Token 流转换为 AST
 class Parser
 {
 public:
-// distinguishes static variable vs function declarations
+// 区分静态变量与函数声明
     enum class StaticType { Var, Fun };
 
     Parser() {}
     Parser(const Lexer& lexer, GlobalData* globalData);
     ~Parser();
 
-// returns the root AST node for the parsed program
+// 返回解析后程序的根 AST 节点
     AstNode* parse();
-// deep-copy a node and register it in the AST pool
+// 深拷贝节点并注册到 AST 内存池
     AstNode* createNode(AstNode* node);
     [[nodiscard]] std::string errorMessage() { return m_error; }
     void setOutputFile(FILE* out) { m_outputFile = out; }
     [[nodiscard]] GlobalData* globalData() { return m_globalData; }
     void setCurrentDir(const std::string& curdir) { m_curdir = curdir; }
     [[nodiscard]] std::string currentDir() { return m_curdir; }
-// check if current token matches the given type
+// 检查当前 Token 是否匹配给定类型
     [[nodiscard]] bool currentTokenIs(TokenKind type) const { return m_currentToken.type() == type; }
     [[nodiscard]] const Token& currentToken() const { return m_currentToken; }
-// look ahead without consuming the next token
+// 向前查看但不消耗下一个 Token
     bool peekTokenIs(TokenKind type) { return m_lexer.peekNextToken().type() == type; }
     [[nodiscard]] std::string currentTokenInfo() const { return m_currentToken.toString(); }
-// advance to a synchronization token for error recovery
+// 前进到同步 Token 以进行错误恢复
     void synchronizeTo(TokenKind syncToken);
-// skip past the current statement boundary
+// 跳过当前语句边界
     void skipToStatementEnd();
 
 private:
@@ -47,15 +47,15 @@ private:
     void errorExpected(TokenKind expectedType, const std::string& context = "");
     void errorUnexpected(const std::string& context = "");
     void errorUnclosed(const std::string& structureType, const Token* startToken = nullptr);
-// consume the expected token type, advancing the lexer
+// 消费期望的 Token 类型，推进词法分析器
     void consume(TokenKind tokenType);
-// whether a semicolon can be omitted after this node
+// 判断此节点后是否可以省略分号
     bool canSkipSemicolon(AstNode* node);
-// parse source content into a list of top-level nodes
+// 将源代码内容解析为顶层节点列表
     void parseContent(const std::string& content, std::vector<AstNode*>& globals, std::string filename);
-// initialize global declaration checker
+// 初始化全局声明检查器
     void initGlobalCheck();
-// run global declaration validation pass
+// 执行全局声明验证阶段
     void startGlobalCheck(const std::vector<AstNode*>& nodes);
 
     AstNode* function(std::string classname = "", bool bStatic = false);
@@ -97,9 +97,9 @@ private:
     GlobalData* m_globalData;
     FILE* m_outputFile;
     std::string m_curdir;
-// tracks which names are declared static
+// 记录哪些名称被声明为静态
     std::map<std::string, StaticType> m_statics;
-// stack for checking global declaration validity
+// 用于检查全局声明有效性的栈
     CheckStack m_globalCheck;
 };
 

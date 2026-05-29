@@ -7,6 +7,9 @@
 
 namespace loong {
 
+// --- 英文关键字映射表 ---
+
+// 英文关键字到 Token 的映射，包含控制流、内置函数等
 static std::map<std::string, Token> englishKeywordMap =
 {
     {"program", Token(TokenKind::Program, "program", 0, 0, "")},
@@ -43,6 +46,9 @@ static std::map<std::string, Token> englishKeywordMap =
     {"_fun", Token(TokenKind::Builtin, "_fun", 0, 0, "")}
 };
 
+// --- 中文关键字映射表 ---
+
+// 中文模式下的关键字映射（结构与英文表相同，供中文环境使用）
 static std::map<std::string, Token> chineseKeywordMap =
 {
     {"program",  Token(TokenKind::Program, "program", 0, 0, "")},
@@ -78,8 +84,10 @@ static std::map<std::string, Token> chineseKeywordMap =
     {"_fun", Token(TokenKind::Builtin, "_fun", 0, 0, "")}
 };
 
+// 合并后的完整关键字查找表
 static std::map<std::string, Token> keywordMap;
 
+// 初始化关键字映射表，将英文和中文表合并（仅执行一次）
 static void initializeKeywordMap()
 {
     static bool initialized = false;
@@ -96,6 +104,9 @@ static void initializeKeywordMap()
     initialized = true;
 }
 
+// --- Token 构造与析构 ---
+
+// 默认构造函数，初始化为 EOF 类型
 Token::Token()
 {
     m_type = TokenKind::Eof;
@@ -103,6 +114,7 @@ Token::Token()
     m_column = 0;
 }
 
+// 完整参数构造函数，设置类型、值、行列号和文件名
 Token::Token(TokenKind type, const std::string& value, int lineNo, int column, const std::string& filename)
 {
     m_type = type;
@@ -112,16 +124,23 @@ Token::Token(TokenKind type, const std::string& value, int lineNo, int column, c
     m_filename = filename;
 }
 
+// 析构函数
 Token::~Token()
 {
 }
 
+// --- 行列号设置 ---
+
+// 设置 Token 所在的行号和列号
 void Token::setLineColumn(int lineNo, int column)
 {
     m_lineNo = lineNo;
     m_column = column;
 }
 
+// --- 关键字查找 ---
+
+// 判断给定字符串是否为关键字
 bool isKeyword(const std::string& word)
 {
     initializeKeywordMap();
@@ -129,6 +148,7 @@ bool isKeyword(const std::string& word)
     return iter != keywordMap.end();
 }
 
+// 查找标识符对应的 Token：若为关键字则返回关键字 Token，否则返回标识符 Token
 Token Token::lookupToken(const std::string& key, int lineNo, int column, const std::string& filename)
 {
     initializeKeywordMap();
@@ -144,6 +164,9 @@ Token Token::lookupToken(const std::string& key, int lineNo, int column, const s
     return Token(TokenKind::Id, key, lineNo, column, filename);
 }
 
+// --- 类型名称映射 ---
+
+// 将 TokenKind 枚举值转换为可读的字符串名称
 std::string Token::tokenTypeName(TokenKind type)
 {
     static std::map<TokenKind, std::string> typeNames = {
@@ -175,18 +198,23 @@ std::string Token::tokenTypeName(TokenKind type)
     return (it != typeNames.end()) ? it->second : "UNKNOWN";
 }
 
+// 生成 Token 的可读字符串表示，包含类型、值、位置和文件名
 std::string Token::toString() const
 {
     return std::format("Token{{type={}, value='{}', line={}, column={}, file='{}'}}",
         tokenTypeName(m_type), m_value, m_lineNo, m_column, m_filename);
 }
 
+// --- Token 分类判断 ---
+
+// 判断当前 Token 是否为关键字
 bool Token::isKeyword() const
 {
     initializeKeywordMap();
     return keywordMap.find(m_value) != keywordMap.end();
 }
 
+// 判断当前 Token 是否为运算符
 bool Token::isOperator() const
 {
     switch (m_type) {
@@ -205,6 +233,7 @@ bool Token::isOperator() const
     }
 }
 
+// 判断当前 Token 是否为字面量（整数、浮点数、字符串、布尔、空值）
 bool Token::isLiteral() const
 {
     switch (m_type) {

@@ -12,17 +12,17 @@
 
 namespace loong {
 
-// tree-walking interpreter that evaluates the AST
+// 遍历式解释器，对抽象语法树进行求值
 class Interpreter
 {
 public:
     Interpreter(const Parser& parser);
     ~Interpreter();
-// parse and execute the full program, returning the result
+// 解析并执行完整程序，返回执行结果
     Variable interpret();
     [[nodiscard]] std::string errorMessage() { return m_error; }
     void setOutputFile(FILE* out) { m_outputFile = out; }
-// dispatch to the appropriate visit method based on node type
+// 根据节点类型分派到对应的访问方法
     void visit(AstNode* node, Variable& res);
     [[nodiscard]] Parser& parser() { return m_parser; }
     [[nodiscard]] CallStack& callStack() { return m_callStack; }
@@ -55,37 +55,37 @@ private:
     void visitFunction(FuncDecl* node, Variable& res);
     void visitFunctionExec(FuncCall* node, Variable& res);
     void visitClass(FuncCall* node, Variable& res);
-// handle member access dispatch (string/array/dict/class methods)
+// 处理成员访问分派（字符串/数组/字典/类的方法）
     void visitMember(AstNode* obj, AstNode* member, Variable& res);
-// handle subscript indexing (array, dict, string)
+// 处理下标索引（数组、字典、字符串）
     void visitIndex(AstNode* obj, AstNode* idx, Variable& res);
-// handle logical not
+// 处理逻辑非运算
     void visitNot(AstNode* obj, Variable& res);
-// evaluate arguments and bind to callable parameters
+// 求值参数表达式并绑定到可调用对象的形参
     void bindArgs(CallableDecl* callable, std::vector<AstNode*>& exprs, Token& token,
                   std::vector<Variable>& paramsPass);
-// bind passed parameters to activation record with defaults
+// 将传入参数绑定到活动记录，并处理默认参数值
     void bindParamsToActivationRecord(CallableDecl* callable, std::vector<Variable>& paramsPass,
                   ActivationRecord& ar, Token& token, Variable& res);
-// execute a function call with argument evaluation
+// 执行函数调用，包含参数求值过程
     void execFunction(FuncDecl* fun, std::vector<AstNode*>& exprs, Token& token, Variable& res);
-// instantiate a class with constructor arguments
+// 使用构造函数参数实例化一个类
     void execClass(ClassDecl* cls, std::vector<AstNode*>& exprs, Token& token, Variable& res);
-// deep-copy an object (dict) for class instances
+// 深拷贝对象（字典）用于类实例
     void copyObject(Variable& object, Variable& res);
-// evaluate argument expressions and collect as Variable vector
+// 求值参数表达式并收集为 Variable 向量
     std::vector<Variable> evaluateFormatArgs(std::vector<AstNode*>& exprs);
-// format a single variable value to output
+// 将单个变量值格式化用于输出
     void printVariable(const Variable& v, bool quoteString);
-// format and output a variable for print/builtin
+// 格式化并输出变量，用于 print/内置函数
     void printObject(Variable& object);
-// read a value by index from array, dict, or string
+// 从数组、字典或字符串中按索引读取值
     void getIndexValue(Variable& var, Variable& idx, Variable& res);
-// write a value by index into array, dict, or string
+// 按索引向数组、字典或字符串写入值
     void setIndexValue(const std::string& varName, Variable& var, Variable& idxValue, const Variable& result, const Token& token);
-// evaluate a variable as a boolean condition
+// 将变量求值为布尔条件
     [[nodiscard]] bool checkCondition(Variable& condition);
-// printf-like output to file or stdout
+// 类似 printf 的格式化输出，输出到文件或标准输出
     void formattedPrint(const char* format, ...);
     void warning(const std::string& warn, const Token& token);
     void error(const std::string& err, const Token& token);

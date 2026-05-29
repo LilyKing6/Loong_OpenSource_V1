@@ -9,10 +9,18 @@
 
 namespace loong {
 
+// --- 静态引用计数映射表 ---
+
+// 数组引用计数表
 std::map<std::vector<Variable>*, int> Variable::s_arrayRefCount;
+// 字典引用计数表
 std::map<std::map<Variable, Variable>*, int> Variable::s_dictRefCount;
+// 指针引用计数表
 std::map<void*, int> Variable::s_pointerRefCount;
 
+// --- 默认初始化 ---
+
+// 将成员变量初始化为默认值
 void Variable::initDefault()
 {
     m_tag = TagType::Normal;
@@ -22,16 +30,21 @@ void Variable::initDefault()
     m_pointer = nullptr;
 }
 
+// --- 构造函数与析构函数 ---
+
+// 默认构造函数，初始化为空类型
 Variable::Variable()
 {
     initDefault();
 }
 
+// 析构函数，减少引用计数并释放资源
 Variable::~Variable()
 {
     decreaseRefCount();
 }
 
+// 拷贝构造函数，复制所有字段并增加引用计数
 Variable::Variable(const Variable& cv)
 {
     m_tag = cv.m_tag;
@@ -48,6 +61,7 @@ Variable::Variable(const Variable& cv)
     increaseRefCount();
 }
 
+// 拷贝赋值运算符，先减少旧引用计数再复制并增加新引用计数
 Variable& Variable::operator=(const Variable& cv)
 {
     if (this == &cv)
@@ -71,6 +85,7 @@ Variable& Variable::operator=(const Variable& cv)
     return *this;
 }
 
+// 字符串构造函数
 Variable::Variable(const std::string& value)
 {
     initDefault();
@@ -78,6 +93,7 @@ Variable::Variable(const std::string& value)
     m_stringValue = value;
 }
 
+// 整数构造函数
 Variable::Variable(Int value)
 {
     initDefault();
@@ -85,6 +101,9 @@ Variable::Variable(Int value)
     m_intValue = value;
 }
 
+// --- Setter 方法 ---
+
+// 设置为浮点数值
 Variable& Variable::setDouble(double value)
 {
     m_type = VarType::Float;
@@ -92,6 +111,7 @@ Variable& Variable::setDouble(double value)
     return *this;
 }
 
+// 标记为错误状态
 Variable& Variable::setError()
 {
     m_tag = TagType::Error;
@@ -99,6 +119,7 @@ Variable& Variable::setError()
     return *this;
 }
 
+// 重置变量为默认空状态
 void Variable::reset()
 {
     decreaseRefCount();
@@ -107,6 +128,7 @@ void Variable::reset()
     m_info.clear();
 }
 
+// 设置为数组类型，可传入已有数组指针或创建指定大小的新数组
 void Variable::setArray(Int arrSize, std::vector<Variable>* pArray)
 {
     m_type = VarType::Array;
@@ -128,6 +150,7 @@ void Variable::setArray(Int arrSize, std::vector<Variable>* pArray)
     }
 }
 
+// 设置为字典类型，可传入已有字典指针或创建新字典
 void Variable::setDict(std::map<Variable, Variable>* pDict)
 {
     m_type = VarType::Dict;
@@ -145,11 +168,13 @@ void Variable::setDict(std::map<Variable, Variable>* pDict)
     s_dictRefCount[m_dict] = 1;
 }
 
+// 初始化指针引用计数为 1
 void Variable::initPointerRef(void* pPointer)
 {
     s_pointerRefCount[m_pointer] = 1;
 }
 
+// 设置或合并信息映射表
 void Variable::setInfo(VecMap& info)
 {
     if (m_info.size() == 0)
@@ -161,8 +186,9 @@ void Variable::setInfo(VecMap& info)
     }
 }
 
-// --- Reference counting ---
+// --- 引用计数管理 ---
 
+// 增加指定指针的引用计数
 template<typename T>
 void Variable::incRef(std::map<T*, int>& refs, T* ptr)
 {
@@ -171,6 +197,7 @@ void Variable::incRef(std::map<T*, int>& refs, T* ptr)
         it->second++;
 }
 
+// 减少指定指针的引用计数，降为零时调用删除器释放资源
 template<typename T>
 void Variable::decRef(std::map<T*, int>& refs, T* ptr, auto&& deleter)
 {
@@ -186,6 +213,7 @@ void Variable::decRef(std::map<T*, int>& refs, T* ptr, auto&& deleter)
     }
 }
 
+// 增加当前变量所持有的数组/字典/指针的引用计数
 void Variable::increaseRefCount()
 {
     if (!m_array && !m_dict && !m_pointer)
@@ -198,6 +226,7 @@ void Variable::increaseRefCount()
         incRef(s_pointerRefCount, m_pointer);
 }
 
+// 减少当前变量所持有的数组/字典/指针的引用计数，必要时释放内存
 void Variable::decreaseRefCount()
 {
     if (!m_array && !m_dict && !m_pointer)
@@ -219,8 +248,9 @@ void Variable::decreaseRefCount()
     }
 }
 
-// --- Arithmetic helpers ---
+// --- 运算辅助方法 ---
 
+// 求值变量的布尔真值：根据不同类型返回其"真值"
 Int Variable::truthiness() const
 {
     switch (m_type)
@@ -236,6 +266,7 @@ Int Variable::truthiness() const
     }
 }
 
+// 算术运算分派：根据类型组合选择整数或浮点运算函数
 Variable Variable::arithOp(const Variable& right, auto&& intFn, auto&& floatFn) const
 {
     auto lt = m_type, rt = right.m_type;
@@ -250,6 +281,7 @@ Variable Variable::arithOp(const Variable& right, auto&& intFn, auto&& floatFn) 
     return Variable().setError();
 }
 
+// 比较运算分派：同类型直接比较，整型与浮点型交叉时自动转换后比较
 Variable Variable::compareOp(const Variable& right, auto&& cmp) const
 {
     auto lt = m_type, rt = right.m_type;
@@ -274,6 +306,7 @@ Variable Variable::compareOp(const Variable& right, auto&& cmp) const
     }
 }
 
+// 二元位运算分派：仅支持整数类型之间的位运算
 Variable Variable::bitwiseOp(const Variable& right, auto&& fn) const
 {
     if (m_type == VarType::Int && right.m_type == VarType::Int)
@@ -281,6 +314,7 @@ Variable Variable::bitwiseOp(const Variable& right, auto&& fn) const
     return Variable().setError();
 }
 
+// 一元位运算分派：仅支持整数类型的一元位运算
 Variable Variable::unaryBitOp(auto&& fn) const
 {
     if (m_type == VarType::Int)
@@ -288,6 +322,7 @@ Variable Variable::unaryBitOp(auto&& fn) const
     return Variable().setError();
 }
 
+// 检查除数是否为零，若为零则设置除零错误标记
 bool Variable::checkDivZero(const Variable& right)
 {
     bool isZero = false;
@@ -304,8 +339,9 @@ bool Variable::checkDivZero(const Variable& right)
     return isZero;
 }
 
-// --- Operators ---
+// --- 运算符重载 ---
 
+// 加法运算：字符串类型执行拼接，数值类型执行算术加法
 Variable Variable::operator+(const Variable& right)
 {
     auto lt = m_type, rt = right.m_type;
@@ -341,6 +377,7 @@ Variable Variable::operator+(const Variable& right)
         [](double a, double b) -> double { return a + b; });
 }
 
+// 减法运算
 Variable Variable::operator-(const Variable& right)
 {
     return arithOp(right,
@@ -348,6 +385,7 @@ Variable Variable::operator-(const Variable& right)
         [](double a, double b) -> double { return a - b; });
 }
 
+// 乘法运算
 Variable Variable::operator*(const Variable& right)
 {
     return arithOp(right,
@@ -355,6 +393,7 @@ Variable Variable::operator*(const Variable& right)
         [](double a, double b) -> double { return a * b; });
 }
 
+// 除法运算，先检查除零
 Variable Variable::operator/(const Variable& right)
 {
     if (checkDivZero(right))
@@ -365,6 +404,7 @@ Variable Variable::operator/(const Variable& right)
         [](double a, double b) -> double { return a / b; });
 }
 
+// 取模运算，仅支持整数
 Variable Variable::operator%(const Variable& right)
 {
     if (m_type == VarType::Int && right.m_type == VarType::Int)
@@ -372,6 +412,7 @@ Variable Variable::operator%(const Variable& right)
     return Variable().setError();
 }
 
+// 等于比较运算
 Variable Variable::operator==(const Variable& right)
 {
     if (m_type != right.m_type)
@@ -386,6 +427,7 @@ Variable Variable::operator==(const Variable& right)
     return compareOp(right, [](auto a, auto b) { return a == b; });
 }
 
+// 不等于比较运算
 Variable Variable::operator!=(const Variable& right)
 {
     if (m_type != right.m_type)
@@ -400,66 +442,79 @@ Variable Variable::operator!=(const Variable& right)
     return compareOp(right, [](auto a, auto b) { return a != b; });
 }
 
+// 大于等于比较运算
 Variable Variable::operator>=(const Variable& right)
 {
     return compareOp(right, [](auto a, auto b) { return a >= b; });
 }
 
+// 小于等于比较运算
 Variable Variable::operator<=(const Variable& right)
 {
     return compareOp(right, [](auto a, auto b) { return a <= b; });
 }
 
+// 大于比较运算
 Variable Variable::operator>(const Variable& right)
 {
     return compareOp(right, [](auto a, auto b) { return a > b; });
 }
 
+// 小于比较运算（返回 Variable，用于表达式求值）
 Variable Variable::operator<(const Variable& right)
 {
     return compareOp(right, [](auto a, auto b) { return a < b; });
 }
 
+// 逻辑与运算：对两个操作数求真值后做逻辑与
 Variable Variable::operator&&(const Variable& right)
 {
     return Variable(truthiness() && right.truthiness() ? 1 : 0);
 }
 
+// 逻辑或运算：对两个操作数求真值后做逻辑或
 Variable Variable::operator||(const Variable& right)
 {
     return Variable(truthiness() || right.truthiness() ? 1 : 0);
 }
 
+// 按位与运算
 Variable Variable::operator&(const Variable& right)
 {
     return bitwiseOp(right, [](Int a, Int b) -> Int { return a & b; });
 }
 
+// 按位或运算
 Variable Variable::operator|(const Variable& right)
 {
     return bitwiseOp(right, [](Int a, Int b) -> Int { return a | b; });
 }
 
+// 按位异或运算
 Variable Variable::operator^(const Variable& right)
 {
     return bitwiseOp(right, [](Int a, Int b) -> Int { return a ^ b; });
 }
 
+// 按位取反运算（一元）
 Variable Variable::operator~()
 {
     return unaryBitOp([](Int a) -> Int { return ~a; });
 }
 
+// 左移运算
 Variable Variable::operator<<(const Variable& right)
 {
     return bitwiseOp(right, [](Int a, Int b) -> Int { return a << b; });
 }
 
+// 右移运算
 Variable Variable::operator>>(const Variable& right)
 {
     return bitwiseOp(right, [](Int a, Int b) -> Int { return a >> b; });
 }
 
+// 小于比较运算（const 版本，用于 std::map 键排序）
 bool Variable::operator<(const Variable& right) const
 {
     if (m_type != right.m_type)

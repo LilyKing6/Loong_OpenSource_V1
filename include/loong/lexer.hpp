@@ -7,7 +7,7 @@
 
 namespace loong {
 
-// converts source text into a stream of tokens
+// 将源代码文本转换为 Token 流
 class Lexer
 {
 public:
@@ -17,7 +17,7 @@ public:
 
     void error();
     void error(const std::string& message);
-// move to the next character in source
+// 移动到源代码中的下一个字符
     void advance();
     void skipWhitespace();
     void skipComment();
@@ -26,17 +26,17 @@ public:
     char peekChar(int offset) const;
     char peek();
     char peekTwo();
-// consume and return the next token
+// 消费并返回下一个 Token
     Token getNextToken();
-// look ahead without consuming
+// 向前查看但不消费
     Token peekNextToken();
-// lex an identifier or keyword
+// 词法分析标识符或关键字
     Token id();
-// lex a numeric literal (int or float)
+// 词法分析数值字面量（整数或浮点数）
     Token number();
-// lex a string literal with escape sequences
+// 词法分析字符串字面量（含转义序列）
     Token str();
-// handle escape sequences inside strings
+// 处理字符串中的转义序列
     void processSpecialChar(std::string& result);
 
     [[nodiscard]] int tokenCount() const { return m_tokenCount; }

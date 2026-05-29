@@ -7,12 +7,12 @@
 
 namespace loong {
 
-// internal name for the global variables dictionary
+// 全局变量字典的内部名称
 inline constexpr std::string_view kGlobalDictName = "__G__";
-// internal name for the command-line arguments array
+// 命令行参数数组的内部名称
 inline constexpr std::string_view kArgvArrayName = "__ARGV__";
 
-// all token types produced by the lexer
+// 词法分析器产生的所有词法单元类型
 enum class TokenKind
 {
     Program,
@@ -97,7 +97,7 @@ enum class TokenKind
     Eof
 };
 
-// lexical token with type, value, and source location
+// 词法单元：包含类型、值和源码位置
 class Token
 {
 public:
@@ -113,17 +113,17 @@ public:
     void setFilename(const std::string& filename) { m_filename = filename; }
     void setLineColumn(int lineNo, int column);
 
-// map a keyword string to its token
+// 将关键字字符串映射为 Token
     static Token lookupToken(const std::string& key, int lineNo, int column, const std::string& filename);
-// human-readable name for a TokenKind
+// TokenKind 的人类可读名称
     static std::string tokenTypeName(TokenKind type);
-// formatted string for error messages
+// 用于错误信息的格式化字符串
     [[nodiscard]] std::string toString() const;
-// whether this token is a language keyword
+// 判断此 Token 是否为语言关键字
     [[nodiscard]] bool isKeyword() const;
-// whether this token is an operator
+// 判断此 Token 是否为运算符
     [[nodiscard]] bool isOperator() const;
-// whether this token is a literal value
+// 判断此 Token 是否为字面量值
     [[nodiscard]] bool isLiteral() const;
 
 private:
@@ -134,7 +134,7 @@ private:
     std::string m_filename;
 };
 
-// check if a word is a reserved keyword
+// 检查一个词是否为保留关键字
 bool isKeyword(const std::string& word);
 
 } // namespace loong

@@ -15,7 +15,7 @@
 
 namespace loong {
 
-// static utility methods for string formatting, file I/O, URL encoding
+// 静态工具方法：字符串格式化、文件读写、URL 编码
 class Tool
 {
 public:
@@ -28,11 +28,11 @@ public:
     static int strCount(const std::string& text, const std::string& str);
     static void strReplace(std::string& text, const std::string& oldStr, const std::string& newStr);
     static void strSplit(const std::string& str, const std::string& splitStr, std::vector<std::string>& result);
-// run a sub-interpreter on a code string
+// 运行子解释器执行代码字符串
     static Variable interpreter(const std::string& code, const std::string& outputfile, const std::vector<Variable>& argv, const Variable& globalValue, std::string filename);
 };
 
-// file handle wrapper for reading/writing binary files
+// 文件句柄封装，用于读写二进制文件
 class File
 {
 public:
@@ -44,7 +44,7 @@ public:
     Int size(void* handle);
 };
 
-// dynamic library loader (DLL on Windows, dlopen on Linux)
+// 动态库加载器（Windows 下使用 DLL，Linux 下使用 dlopen）
 class Dll
 {
 public:
@@ -53,11 +53,11 @@ public:
     bool callLibrary(const std::vector<Variable>& args, Variable& result);
 };
 
-// base class for type-specific method dispatch (string/array/dict/class)
+// 类型特定方法分派的基类（字符串/数组/字典/类）
 class LibraryBase
 {
 public:
-// member method identifiers for library dispatch
+// 库分派中的成员方法标识符
     enum class LibMember
     {
         Substr,
@@ -93,11 +93,11 @@ public:
     LibraryBase() {}
     virtual ~LibraryBase() {}
 
-// dispatch a method call by name; returns false if not found
+// 按名称分派方法调用；未找到时返回 false
     virtual bool callMember(const std::string& name, Variable& var, const std::vector<Variable>& args, Variable& ret) { return false; }
     void error(std::string err) { m_error = err; }
     [[nodiscard]] std::string errorMessage() { return m_error; }
-// comparison function for sorting variables
+// 用于排序变量的比较函数
     static bool compare(const Variable& a, const Variable& b);
 
 private:
@@ -106,7 +106,7 @@ protected:
     std::map<std::string, LibMember> m_members;
 };
 
-// string manipulation methods (substr, find, replace, split, etc.)
+// 字符串操作方法（substr、find、replace、split 等）
 class StringLib : public LibraryBase
 {
 public:
@@ -115,7 +115,7 @@ public:
     bool callMember(const std::string& name, Variable& var, const std::vector<Variable>& args, Variable& ret) override;
 };
 
-// array manipulation methods (append, resize, sort, etc.)
+// 数组操作方法（append、resize、sort 等）
 class ArrayLib : public LibraryBase
 {
 public:
@@ -124,7 +124,7 @@ public:
     bool callMember(const std::string& name, Variable& var, std::vector<Variable>& args, Variable& ret);
 };
 
-// dictionary manipulation methods (keys, values, iterators)
+// 字典操作方法（keys、values、迭代器等）
 class DictLib : public LibraryBase
 {
 public:
@@ -133,7 +133,7 @@ public:
     bool callMember(const std::string& name, Variable& var, const std::vector<Variable>& args, Variable& ret) override;
 };
 
-// class instance method dispatch
+// 类实例方法分派
 class ClassLib : public LibraryBase
 {
 public:
@@ -142,7 +142,7 @@ public:
     bool callMember(const std::string& name, Variable& var, const std::vector<Variable>& args, Variable& ret) override;
 };
 
-// built-in functions (type conversion, math, regex, set operations)
+// 内置函数（类型转换、数学、正则、集合操作）
 class Func
 {
 public:

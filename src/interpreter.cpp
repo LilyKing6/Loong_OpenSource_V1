@@ -7,6 +7,9 @@ using namespace std;
 
 extern Interpreter* s_interpreter;
 
+// --- 构造与析构 ---
+
+// 解释器构造函数
 Interpreter::Interpreter(const Parser& parser)
 {
 	m_outputFile = nullptr;
@@ -15,10 +18,14 @@ Interpreter::Interpreter(const Parser& parser)
 		s_interpreter = this;
 }
 
+// 解释器析构函数
 Interpreter::~Interpreter()
 {
 }
 
+// --- 辅助方法 ---
+
+// 格式化输出到文件或标准输出
 void Interpreter::formattedPrint(const char* format, ...)
 {
 	char buffer[1024];
@@ -57,6 +64,7 @@ void Interpreter::warning(const string& warn, const Token& token)
 	m_error = buff;
 }
 
+// 报告运行时错误
 void Interpreter::error(const string& err, const Token& token)
 {
 	char fileinfo[512];
@@ -81,6 +89,9 @@ void Interpreter::error(const string& err, const Token& token)
 	m_error = buff;
 }
 
+// --- 核心执行 ---
+
+// 根据节点类型分派到对应的 visit 方法
 void Interpreter::visit(AstNode* node, Variable& res)
 {
 	res.reset();
@@ -182,6 +193,9 @@ void Interpreter::visit(AstNode* node, Variable& res)
 	}
 }
 
+// --- 表达式求值 ---
+
+// 访问二元运算节点（短路逻辑 + 算术/比较/位运算）
 void Interpreter::visitBinOp(BinOp* node, Variable& res)
 {
 	TokenKind type = node->token().type();
@@ -235,6 +249,7 @@ void Interpreter::visitBinOp(BinOp* node, Variable& res)
 	}
 }
 
+// 访问数字字面量
 void Interpreter::visitNum(NumLiteral* node, Variable& res)
 {
 	if (node->numType() == NumLiteral::NumType::Int)
@@ -247,6 +262,7 @@ void Interpreter::visitNum(NumLiteral* node, Variable& res)
 	}
 }
 
+// 访问布尔字面量
 void Interpreter::visitBool(BoolLiteral* node, Variable& res)
 {
 	int n = 0;
@@ -255,12 +271,14 @@ void Interpreter::visitBool(BoolLiteral* node, Variable& res)
 	res.setInt(n);
 }
 
+// 访问字符串字面量
 void Interpreter::visitStr(StrLiteral* node, Variable& res)
 {
 	res.setType(Variable::VarType::String);
 	res.stringValue() = node->value();
 }
 
+// 访问数组字面量
 void Interpreter::visitArray(ArrayLiteral* node, Variable& arr)
 {
 	arr.setArray(0);
@@ -276,6 +294,7 @@ void Interpreter::visitArray(ArrayLiteral* node, Variable& arr)
 	}
 }
 
+// 访问字典字面量
 void Interpreter::visitDict(DictLiteral* node, Variable& dict)
 {
 	string var_name = node->token().value();
@@ -298,6 +317,7 @@ void Interpreter::visitDict(DictLiteral* node, Variable& dict)
 	}
 }
 
+// 按索引向数组/字典/字符串中写入值
 void Interpreter::setIndexValue(const string& var_name, Variable& var, Variable& idx_value, const Variable& result, const Token& token)
 {
 	Variable index;
@@ -365,6 +385,7 @@ void Interpreter::setIndexValue(const string& var_name, Variable& var, Variable&
 
 }
 
+// 按索引从数组/字典/字符串中读取值
 void Interpreter::getIndexValue(Variable& var, Variable& idx, Variable& var_value)
 {
 	if (var.type() == Variable::VarType::Dict || var.type() == Variable::VarType::Class)
@@ -407,6 +428,7 @@ void Interpreter::getIndexValue(Variable& var, Variable& idx, Variable& var_valu
 
 }
 
+// 访问变量引用（在作用域链中查找变量值）
 void Interpreter::visitVar(VarRef* node, Variable& var_value)
 {
 	ActivationRecord* ar = nullptr;
@@ -456,6 +478,7 @@ void Interpreter::visitVar(VarRef* node, Variable& var_value)
 	}
 
 }
+// 访问赋值表达式
 void Interpreter::visitAssign(AssignExpr* node, Variable& res)
 {
 	if (node->left()->type()!=AstNode::Type::Var)
@@ -586,6 +609,9 @@ void Interpreter::visitAssign(AssignExpr* node, Variable& res)
 
 	return res.reset();
 }
+// --- 语句与声明 ---
+
+// 访问程序入口节点
 void Interpreter::visitProgram(Program* node, Variable& res)
 {
 	ActivationRecord ar(node->name(),"program",1);
@@ -604,6 +630,7 @@ void Interpreter::visitProgramBlock(ProgramBlock* node, Variable& res)
 {
 	visit(node->compound(),res);
 }
+// 访问语句块
 void Interpreter::visitBlock(Block* node, Variable& result)
 {
 	for (size_t i = 0; i < node->children().size(); i++)
@@ -616,10 +643,12 @@ void Interpreter::visitBlock(Block* node, Variable& result)
 	}
 }
 
+// 将变量求值为布尔值
 bool Interpreter::checkCondition(Variable& condition)
 {
 	return condition.truthiness() != 0;
 }
+// 访问 if 条件语句
 void Interpreter::visitIfStmt(IfStmt* node, Variable& result)
 {
 	visit(node->expr(), result);
@@ -645,6 +674,7 @@ void Interpreter::visitIfStmt(IfStmt* node, Variable& result)
 
 	return result.reset();
 }
+// 访问 for 循环
 void Interpreter::visitForStmt(ForStmt* node, Variable& result)
 {
 	for (size_t i = 0; i < node->initStatements().size(); i++)
@@ -673,6 +703,7 @@ void Interpreter::visitForStmt(ForStmt* node, Variable& result)
 
 	return result.reset();
 }
+// 访问 while 循环
 void Interpreter::visitWhileStmt(WhileStmt* node, Variable& result)
 {
 	visit(node->expr(), result);
@@ -696,19 +727,23 @@ void Interpreter::visitWhileStmt(WhileStmt* node, Variable& result)
 
 	return result.reset();
 }
+// 访问 break 语句
 void Interpreter::visitBreak(BreakStmt* node, Variable& res)
 {
 	res.setTag(Variable::TagType::Break);
 }
+// 访问 continue 语句
 void Interpreter::visitContinue(ContinueStmt* node, Variable& res)
 {
 	res.setTag(Variable::TagType::Continue);
 }
+// 访问 return 语句
 void Interpreter::visitReturn(ReturnStmt* node, Variable& res)
 {
 	visit(node->expr(), res);
 	res.setTag(Variable::TagType::Return);
 }
+// 访问 #include 语句
 void Interpreter::visitInclude(IncludeStmt* node, Variable& res)
 {
 	for (size_t i = 0; i<node->globals().size(); i++)
@@ -718,6 +753,7 @@ void Interpreter::visitInclude(IncludeStmt* node, Variable& res)
 	}
 	return res.reset();
 }
+// 访问 #import 语句
 void Interpreter::visitImport(ImportStmt* node, Variable& res)
 {
 	for (size_t i = 0; i<node->globals().size(); i++)
@@ -727,6 +763,7 @@ void Interpreter::visitImport(ImportStmt* node, Variable& res)
 	}
 	return res.reset();
 }
+// 访问内置函数调用
 void Interpreter::visitBuiltin(BuiltinCall* node, Variable& res)
 {
 	if (node->token().value() == "print")
@@ -1052,11 +1089,13 @@ void Interpreter::visitBuiltin(BuiltinCall* node, Variable& res)
 
 	return res.reset();
 }
+// 访问类声明（注册到全局作用域）
 void Interpreter::visitClass(FuncCall* node, Variable& res)
 {
 	ClassDecl* cls = (ClassDecl*)node->funcDecl();
 	execClass(cls, node->exprs(), node->token(),res);
 }
+// 访问函数声明（注册到全局作用域）
 void Interpreter::visitFunction(FuncDecl* node, Variable& res)
 {
 	string::size_type pos = node->name().rfind(".");
@@ -1075,6 +1114,7 @@ void Interpreter::visitFunction(FuncDecl* node, Variable& res)
 	return res.reset();
 }
 
+// 访问函数调用
 void Interpreter::visitFunctionExec(FuncCall* node, Variable& res)
 { 
 	if (node->isVar())
@@ -1096,6 +1136,9 @@ void Interpreter::visitFunctionExec(FuncCall* node, Variable& res)
 	return execFunction(fun, node->exprs(), node->token(),res);
 }
 
+// --- 函数与类执行 ---
+
+// 收集并绑定实参表达式
 void Interpreter::bindArgs(CallableDecl* callable, vector<AstNode*>& exprs,
 	Token& token, vector<Variable>& paramsPass)
 {
@@ -1120,6 +1163,7 @@ void Interpreter::bindArgs(CallableDecl* callable, vector<AstNode*>& exprs,
 	}
 }
 
+// 执行函数调用
 void Interpreter::execFunction(FuncDecl* fun, vector<AstNode*>& exprs, Token& token, Variable& res)
 {
 	if (fun->type() == AstNode::Type::Empty)
@@ -1156,6 +1200,7 @@ void Interpreter::execFunction(FuncDecl* fun, vector<AstNode*>& exprs, Token& to
 	return res.reset();
 }
 
+// 实例化类
 void Interpreter::execClass(ClassDecl* cls, vector<AstNode*>& exprs, Token& token, Variable& res)
 {
 	vector<Variable> params_pass;
@@ -1195,6 +1240,7 @@ void Interpreter::execClass(ClassDecl* cls, vector<AstNode*>& exprs, Token& toke
 	res = new_ar.getValue("self");
 }
 
+// 解释并执行完整程序，返回结果
 Variable Interpreter::interpret()
 {
 	AstNode* tree = m_parser.parse();
@@ -1212,6 +1258,7 @@ Variable Interpreter::interpret()
 	return result;
 }
 
+// 访问下标索引（读取）
 void Interpreter::visitIndex(AstNode* obj, AstNode* idx, Variable& res)
 {
 	Variable var;
@@ -1221,6 +1268,7 @@ void Interpreter::visitIndex(AstNode* obj, AstNode* idx, Variable& res)
 	getIndexValue(var, index,res);
 }
 
+// 访问成员访问（字符串/数组/字典/类方法分派）
 void Interpreter::visitMember(AstNode* obj, AstNode* member, Variable& res)
 {
 	Variable &ret=res;
@@ -1401,6 +1449,7 @@ void Interpreter::visitMember(AstNode* obj, AstNode* member, Variable& res)
 
 }
 
+// 访问一元运算节点（逻辑非/位取反/取负）
 void Interpreter::visitNot(AstNode* node, Variable& res)
 {
 	Variable value;
@@ -1408,6 +1457,7 @@ void Interpreter::visitNot(AstNode* node, Variable& res)
 	res.setInt(!checkCondition(value));
 }
 
+// 深拷贝对象（用于类实例化）
 void Interpreter::copyObject(Variable& object, Variable& newObj)
 {
 	if (object.type() == Variable::VarType::Array)
@@ -1453,6 +1503,7 @@ void Interpreter::copyObject(Variable& object, Variable& newObj)
 	newObj = object;
 }
 
+// 求值格式化参数列表
 vector<Variable> Interpreter::evaluateFormatArgs(vector<AstNode*>& exprs)
 {
     vector<Variable> vecArgs;
@@ -1465,6 +1516,9 @@ vector<Variable> Interpreter::evaluateFormatArgs(vector<AstNode*>& exprs)
     return vecArgs;
 }
 
+// --- 输出与类型转换 ---
+
+// 将单个变量值转为字符串
 void Interpreter::printVariable(const Variable& v, bool quoteString)
 {
 	switch (v.type())
@@ -1506,6 +1560,7 @@ void Interpreter::printVariable(const Variable& v, bool quoteString)
 	}
 }
 
+// 格式化输出变量到文件或标准输出
 void Interpreter::printObject(Variable& object)
 {
 	if (object.type() == Variable::VarType::Array)
@@ -1559,6 +1614,7 @@ void Interpreter::printObject(Variable& object)
 	}
 
 }
+// 将参数绑定到活动记录（处理默认参数）
 void Interpreter::bindParamsToActivationRecord(CallableDecl* callable, std::vector<Variable>& paramsPass,
     ActivationRecord& ar, Token& token, Variable& res)
 {

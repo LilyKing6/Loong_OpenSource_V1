@@ -5,9 +5,9 @@
 
 namespace loong {
 
-// full product name
+// 完整产品名称
 inline constexpr std::string_view kSoftName = "Loong Programming Language";
-// short identifier
+// 简短标识符
 inline constexpr std::string_view kCodeName = "Loong";
 
 inline constexpr int kCopyrightYear = 2024;
@@ -16,11 +16,11 @@ inline constexpr int kVersionMinor = 2;
 inline constexpr int kVersionBuild = 0;
 inline constexpr int kVersionQfe = 0;
 
-// edition/channel identifier
+// 版本/渠道标识符
 inline constexpr std::string_view kVersionBuildType = "loong_opensource";
 inline constexpr long kReleaseDate = 20240901L;
 
-// extract build timestamp from __DATE__ and __TIME__
+// 从 __DATE__ 和 __TIME__ 提取构建时间戳
 #define BUILD_YEAR     ((((__DATE__ [7] - '0') * 10 + (__DATE__ [8] - '0')) * 10 \
                                      + (__DATE__ [9] - '0')) * 10 + (__DATE__ [10] - '0'))
 #define BUILD_MONTH    (__DATE__ [2] == 'n' ? (__DATE__ [1] == 'a' ? 1 : 6) \

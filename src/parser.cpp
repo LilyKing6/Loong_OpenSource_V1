@@ -8,6 +8,9 @@
 namespace loong {
 using namespace std;
 
+// --- 构造与辅助 ---
+
+// 构造函数，初始化解析器
 Parser::Parser(const Lexer& lexer, GlobalData* pGlobalData)
 {
 	m_outputFile = nullptr;
@@ -38,6 +41,7 @@ void Parser::formattedPrint(const char* format, ...)
 		printf("%s", buffer);
 }
 
+// 创建 AST 节点并注册到内存池
 AstNode* Parser::createNode(AstNode* node)
 {
 	if (m_globalData)
@@ -46,6 +50,7 @@ AstNode* Parser::createNode(AstNode* node)
 	return node;
 }
 
+// 报告语法错误
 void Parser::error(const string& err, const Token* pToken)
 {
 	char fileinfo[1024];
@@ -76,6 +81,7 @@ void Parser::error(const string& err, const Token* pToken)
 	m_error = string(buff) + string(tokenInfo);
 }
 
+// 跳到同步点进行错误恢复
 void Parser::synchronizeTo(TokenKind syncToken)
 {
 	while (!currentTokenIs(TokenKind::Eof) && !currentTokenIs(syncToken))
@@ -84,6 +90,7 @@ void Parser::synchronizeTo(TokenKind syncToken)
 	}
 }
 
+// 跳过当前语句边界
 void Parser::skipToStatementEnd()
 {
 	while (!currentTokenIs(TokenKind::Eof) && !currentTokenIs(TokenKind::Semi) && !currentTokenIs(TokenKind::End))
@@ -124,6 +131,7 @@ void Parser::errorUnclosed(const string& structureType, const Token* startToken)
 	error(buff, &m_currentToken);
 }
 
+// 消费期望的 Token 类型
 void Parser::consume(TokenKind token_type)
 {
 	if (m_currentToken.type() == token_type)
@@ -143,6 +151,9 @@ void Parser::consume(TokenKind token_type)
 	}
 }
 
+// --- 顶层解析 ---
+
+// 解析源文件内容（处理 #include/#import/函数/类/全局变量声明）
 void Parser::parseContent(const string& content, vector<AstNode*>& globals, string filename)
 {
 	Lexer lexer(content, filename);
@@ -265,11 +276,15 @@ void Parser::parseContent(const string& content, vector<AstNode*>& globals, stri
 		m_error = parser.errorMessage();
 }
 
+// 解析完整程序，返回 AST 根节点
 AstNode* Parser::parse()
 {
 	return program();
 }
 
+// --- 声明解析 ---
+
+// 解析类定义
 AstNode* Parser::classDef(bool bStatic)
 {
 	initGlobalCheck();
@@ -343,6 +358,7 @@ AstNode* Parser::classDef(bool bStatic)
 	return root;
 }
 
+// 解析函数定义
 AstNode* Parser::function(string classname, bool bStatic)
 {
 	initGlobalCheck();
@@ -450,6 +466,7 @@ AstNode* Parser::functionExec()
 	return node;
 }
 
+// 解析顶层声明（在当前解析器中就地处理）
 void Parser::parseTopLevelDecls(vector<AstNode*>& globals, const string& curdir)
 {
 	while (m_currentToken.type() == TokenKind::Function ||
@@ -550,6 +567,7 @@ void Parser::parseTopLevelDecls(vector<AstNode*>& globals, const string& curdir)
 	}
 }
 
+// 解析 program 入口块
 AstNode* Parser::program()
 {
 	vector<AstNode*> globals;
@@ -600,6 +618,7 @@ AstNode* Parser::compoundStatement()
 	return root;
 }
 
+// 判断此节点后是否可省略分号
 bool Parser::canSkipSemicolon(AstNode* node)
 {
 	bool bSkipSEMI = false;
@@ -636,6 +655,9 @@ vector<AstNode*> Parser::statementList(string classname)
 	}
 	return nodes;
 }
+// --- 语句解析 ---
+
+// 解析单条语句
 AstNode* Parser::statement(string classname)
 {
 	AstNode* node = nullptr;
@@ -696,6 +718,7 @@ AstNode* Parser::statement(string classname)
 	return node;
 }
 
+// 解析 #include 语句
 AstNode* Parser::includeStatement()
 {
     vector<AstNode*> globals;
@@ -731,6 +754,7 @@ AstNode* Parser::includeStatement()
 
     return node;
 }
+// 解析 #import 语句
 AstNode* Parser::importStatement()
 {
     vector<AstNode*> globals;
@@ -797,6 +821,7 @@ AstNode* Parser::continueStatement()
 	AstNode* node = createNode(new ContinueStmt(m_currentToken));
 	return node;
 }
+// 解析 return 语句
 AstNode* Parser::returnStatement()
 {
 	consume(TokenKind::Return);
@@ -808,6 +833,7 @@ AstNode* Parser::returnStatement()
 	AstNode* node = createNode(new ReturnStmt(m_currentToken, exp));
 	return node;
 }
+// 解析 for 循环语句
 AstNode* Parser::forStatement()
 {
 	consume(TokenKind::For);
@@ -860,6 +886,7 @@ AstNode* Parser::forStatement()
 
 	return root;
 }
+// 解析 while 循环语句
 AstNode* Parser::whileStatement()
 {
 	consume(TokenKind::While);
@@ -884,6 +911,7 @@ AstNode* Parser::whileStatement()
 
 	return root;
 }
+// 解析 if 条件语句
 AstNode* Parser::ifStatement()
 {
 	consume(TokenKind::If);
@@ -932,6 +960,9 @@ AstNode* Parser::ifStatement()
 	return root;
 }
 
+// --- 表达式解析 ---
+
+// 解析基本因子（字面量/变量/括号表达式/一元运算）
 AstNode* Parser::factor()
 {
     Token token = m_currentToken;
@@ -1064,6 +1095,7 @@ AstNode* Parser::termSquareDot()
 
 }
 
+// 解析二元表达式（表驱动，按优先级递归下降）
 AstNode* Parser::parseBinaryExpr(int level)
 {
     static const struct { vector<TokenKind> ops; } table[] = {
@@ -1116,6 +1148,7 @@ AstNode* Parser::termOr()
     return parseBinaryExpr(0);
 }
 
+// 解析后缀自增/自减
 AstNode* Parser::termPlusPlus()
 {
     AstNode* node = termOr();
@@ -1188,6 +1221,7 @@ AstNode* Parser::termPlusPlus()
     return node;
 }
 
+// 解析表达式（赋值或二元）
 AstNode* Parser::expr()
 {
 	Token prev_token = m_currentToken;
@@ -1208,6 +1242,7 @@ AstNode* Parser::expr()
 
 	return node;
 }
+// 解析变量引用（含函数调用参数）
 AstNode* Parser::variable()
 {
 	Token token = m_currentToken;
@@ -1243,6 +1278,7 @@ AstNode* Parser::variable()
 
 	return node;
 }
+// 解析数组或字典字面量
 AstNode* Parser::arrayDict(const Token& prev_token)
 {
 	if (m_currentToken.type() == TokenKind::LSquare)
@@ -1306,6 +1342,7 @@ AstNode* Parser::arrayDict(const Token& prev_token)
 	return nullptr;
 }
 
+// 解析数组/字典初始化赋值
 AstNode* Parser::assignmentArrayDict(const Token& prev_token, const Token& token, AstNode* left)
 {
 	if (m_currentToken.type() == TokenKind::LSquare)
@@ -1375,6 +1412,7 @@ AstNode* Parser::assignmentArrayDict(const Token& prev_token, const Token& token
 	return createNode(new NoOp());
 }
 
+// 解析 global 语句
 AstNode* Parser::globalStatement()
 {
 	AstNode* node = createNode(new GlobalStmt(m_currentToken));
@@ -1400,10 +1438,14 @@ AstNode* Parser::globalStatement()
 
 	return node;
 }
+// --- 全局声明检查 ---
+
+// 初始化全局声明检查器
 void  Parser::initGlobalCheck()
 {
 	m_globalCheck.push();
 }
+// 开始全局声明检查
 void  Parser::startGlobalCheck(const vector<AstNode*>& nodes)
 {
 	vector<AstNode*> &m_globalNodes = m_globalCheck.top().nodes();
@@ -1462,6 +1504,7 @@ void  Parser::startGlobalCheck(const vector<AstNode*>& nodes)
 	m_globalCheck.pop();
 }
 
+// 根据关键字类型解析并读取 include/import 文件
 std::string Parser::resolveIncludedFile(const std::string& keyword, const std::string& filename, const std::string& curdir)
 {
     string filecontent;

@@ -17,8 +17,14 @@
 namespace loong {
 using namespace std;
 
+// --- 全局变量 ---
+
+// 全局解释器实例指针
 Interpreter* s_interpreter = nullptr;
 
+// --- Tool 工具方法 ---
+
+// C 风格格式化字符串，支持 %s/%c/%d/%f/%x/%X/%o
 string Tool::formatString(string& format, vector<Variable>& vecArgs)
 {
 	const string err1 = "sprintf argument number error\r\n";
@@ -104,6 +110,7 @@ string Tool::formatString(string& format, vector<Variable>& vecArgs)
 	return "";
 }
 
+// 读取文件全部内容到字符串
 string Tool::readFile(const string& strFilename)
 {
 	FILE *fp = fopen(strFilename.c_str(), "rb");
@@ -123,7 +130,8 @@ string Tool::readFile(const string& strFilename)
 	return strbuf;
 }
 
-string Tool::readFileFromHeaderDir(const string& filename) 
+// 从解释器 Include/ 目录读取库文件
+string Tool::readFileFromHeaderDir(const string& filename)
 {
 	string header_dir = getInterpreterDir() + "Include/";
 	string full_path = header_dir + filename;
@@ -131,6 +139,7 @@ string Tool::readFileFromHeaderDir(const string& filename)
 	return readFile(full_path);
 }
 
+// 获取解释器可执行文件所在目录
 string Tool::getInterpreterDir()
 {
 #ifdef _WIN32
@@ -152,6 +161,7 @@ string Tool::getInterpreterDir()
 #endif
 }
 
+// 十进制数转十六进制字符
 char dec2hexChar(short int n) {
 	if (0 <= n && n <= 9) {
 		return char(short('0') + n);
@@ -164,6 +174,7 @@ char dec2hexChar(short int n) {
 	}
 }
 
+// 统计子串在文本中出现的次数
 int Tool::strCount(const string& text, const string& str)
 {
 	int count = 0;
@@ -178,6 +189,7 @@ int Tool::strCount(const string& text, const string& str)
 	return count;
 }
 
+// 全局替换文本中的指定子串
 void Tool::strReplace(string& text, const string& str_old, const string& str_new)
 {
 	for (string::size_type pos(0); pos != string::npos; pos += str_new.length())
@@ -190,6 +202,7 @@ void Tool::strReplace(string& text, const string& str_old, const string& str_new
 	}
 }
 
+// 按分隔符拆分字符串到数组
 void Tool::strSplit(const string& str, const string& splitstr, vector<string>& vecStr)
 {
 	string::size_type pos1, pos2;
@@ -205,6 +218,7 @@ void Tool::strSplit(const string& str, const string& splitstr, vector<string>& v
 	vecStr.push_back(str.substr(pos1));
 }
 
+// 运行子解释器执行代码字符串
 Variable Tool::interpreter(const string& code, const string& outputfile, const vector<Variable>& vecArgv, const Variable& globalValue, string filename)
 {
 	FILE *out = nullptr;
@@ -242,12 +256,16 @@ Variable Tool::interpreter(const string& code, const string& outputfile, const v
 	return ret;
 }
 
+// --- 文件操作 ---
+
+// 打开文件，返回文件句柄
 void* File::open(const char *filename, const char *mode)
 {
 	FILE *fp = fopen(filename, mode);
 	return fp;
 }
 
+// 关闭文件句柄
 void File::close(void* handle)
 {
 	FILE* fp = (FILE*)handle;
@@ -255,6 +273,7 @@ void File::close(void* handle)
 		fclose((FILE*)handle);
 }
 
+// 从文件读取指定字节数
 bool File::read(void* handle, Int size, Variable& result)
 {
 	if (size <= 0)
@@ -273,6 +292,7 @@ bool File::read(void* handle, Int size, Variable& result)
 	return false;
 }
 
+// 向文件写入内容
 bool File::write(void* handle, const Variable& content)
 {
 	FILE* fp = (FILE*)handle;
@@ -299,6 +319,7 @@ bool File::write(void* handle, const Variable& content)
 	return false;
 }
 
+// 获取文件大小
 Int File::size(void* handle)
 {
 	FILE* fp = (FILE*)handle;
@@ -318,6 +339,7 @@ Int File::size(void* handle)
 	return -1;
 }
 
+// 设置文件读写位置
 bool File::seek(void* handle, Int pos)
 {
 	FILE* fp = (FILE*)handle;
@@ -334,6 +356,9 @@ bool File::seek(void* handle, Int pos)
 	return false;
 }
 
+// --- 比较函数 ---
+
+// 变量比较函数，用于数组排序
 bool LibraryBase::compare(const Variable& a, const Variable& b) {
 	
 	if (a.type() != b.type())
@@ -363,6 +388,9 @@ bool LibraryBase::compare(const Variable& a, const Variable& b) {
 	return false;
 }
 
+// --- 字符串库 ---
+
+// 构造函数，注册字符串方法名
 StringLib::StringLib()
 {
 	srand((unsigned)time(nullptr));
@@ -385,6 +413,7 @@ StringLib::~StringLib()
 {
 }
 
+// 字符串方法分派（substr/find/rfind/replace/split/size/insert/erase/trim/ltrim/rtrim/lower/upper）
 bool StringLib::callMember(const string& name, Variable& var, const vector<Variable>& args, Variable& ret)
 {
 	map<string, LibraryBase::LibMember>::const_iterator itr = m_members.find(name);
@@ -726,6 +755,9 @@ bool StringLib::callMember(const string& name, Variable& var, const vector<Varia
 	return false;
 }
 
+// --- 数组库 ---
+
+// 构造函数，注册数组方法名
 ArrayLib::ArrayLib()
 {
 	m_members["append"] = LibraryBase::LibMember::Append;
@@ -746,6 +778,7 @@ ArrayLib::~ArrayLib()
 {
 }
 
+// 数组方法分派（append/size/resize/clear/erase/insert/_getptr/_restore/sort/swap/create2d/create3d）
 bool ArrayLib::callMember(const string& name, Variable& var, vector<Variable>& args, Variable& ret)
 {
 	map<string, LibraryBase::LibMember>::const_iterator itr = m_members.find(name);
@@ -1008,6 +1041,9 @@ bool ArrayLib::callMember(const string& name, Variable& var, vector<Variable>& a
 	return false;
 }
 
+// --- 字典库 ---
+
+// 构造函数，注册字典方法名
 DictLib::DictLib()
 {
 	m_members["find"] = LibraryBase::LibMember::Find;
@@ -1029,6 +1065,7 @@ DictLib::~DictLib()
 {
 }
 
+// 字典方法分派（find/erase/insert/size/clear/begin/end/rbegin/rend/next/get/_getptr/_restore）
 bool DictLib::callMember(const string& name, Variable& var, const vector<Variable>& args, Variable& ret)
 {
 	map<string, LibraryBase::LibMember>::const_iterator itr = m_members.find(name);
@@ -1344,6 +1381,9 @@ bool DictLib::callMember(const string& name, Variable& var, const vector<Variabl
 	return false;
 }
 
+// --- 类实例库 ---
+
+// 构造函数，注册类方法名
 ClassLib::ClassLib()
 {
 	m_members["_getptr"] = LibraryBase::LibMember::GetPtr;
@@ -1354,6 +1394,7 @@ ClassLib::~ClassLib()
 {
 }
 
+// 类实例方法分派（_getptr/_restore）
 bool ClassLib::callMember(const string& name, Variable& var, const vector<Variable>& args, Variable& ret)
 {
 	map<string, LibraryBase::LibMember>::const_iterator itr = m_members.find(name);
@@ -1396,6 +1437,9 @@ bool ClassLib::callMember(const string& name, Variable& var, const vector<Variab
 	return false;
 }
 
+// --- 内置函数分派 ---
+
+// 内置函数分发表（文件操作/时间函数/系统调用等）
 bool Func::callFunc(const vector<Variable>& args, Variable& ret)
 {
 	if (args.size() == 0)

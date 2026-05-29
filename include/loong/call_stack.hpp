@@ -8,7 +8,7 @@
 
 namespace loong {
 
-// stores variables for a single scope (function call, global scope)
+// 存储单个作用域（函数调用、全局作用域）的变量
 class ActivationRecord
 {
 public:
@@ -23,7 +23,7 @@ public:
     void setDictValue(const std::string& key, const Variable& value, const Variable& dictIndex);
     Variable& getDictValue(const std::string& key, const Variable& dictIndex);
     [[nodiscard]] Variable::VarType getVarType(const std::string& key);
-// populate with global dict and argv array
+    // 用全局字典和 argv 数组填充
     void createGlobal(const Variable& globalValue, const std::vector<Variable>& argv, const std::string& argvName);
     Variable& getGlobalValue(const std::string& varName);
     void setGlobalValue(const std::string& varName, const Variable& value);
@@ -36,7 +36,7 @@ private:
     int m_level;
 };
 
-// stack of activation records managing function call scopes
+// 管理函数调用作用域的活动记录栈
 class CallStack
 {
 public:

@@ -8,7 +8,7 @@
 
 namespace loong {
 
-// shared repository for all parsed functions, globals, and AST nodes
+// 所有已解析函数、全局变量和 AST 节点的共享仓库
 class GlobalData
 {
 public:
@@ -17,7 +17,7 @@ public:
     std::map<std::string, AstNode*>& functions() { return m_functions; }
     std::map<std::string, bool>& globals() { return m_globals; }
     std::vector<AstNode*>& allNodes() { return m_nodes; }
-    // free all allocated AST nodes
+    // 释放所有已分配的 AST 节点
     void clearAllNodes();
     void clearGlobals();
 
@@ -27,7 +27,7 @@ private:
     std::vector<AstNode*> m_nodes;
 };
 
-// tracks variables in a scope to validate global declarations
+// 跟踪作用域中的变量以验证全局声明
 class GlobalChecker
 {
 public:
@@ -41,7 +41,7 @@ private:
     std::map<std::string, bool> m_assignVars;
 };
 
-// stack of GlobalCheckers used during parsing
+// 解析期间使用的 GlobalChecker 栈
 class CheckStack
 {
 public:
