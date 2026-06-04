@@ -13,7 +13,6 @@ namespace loong {
 static std::map<std::string, Token> englishKeywordMap =
 {
     {"program", Token(TokenKind::Program, "program", 0, 0, "")},
-    {"main", Token(TokenKind::Program, "main", 0, 0, "")},
     {"if", Token(TokenKind::If, "if", 0, 0, "")},
     {"else", Token(TokenKind::Else, "else", 0, 0, "")},
     {"while", Token(TokenKind::While, "while", 0, 0, "")},
@@ -51,7 +50,52 @@ static std::map<std::string, Token> englishKeywordMap =
 // 中文模式下的关键字映射（结构与英文表相同，供中文环境使用）
 static std::map<std::string, Token> chineseKeywordMap =
 {
+    // 程序入口
+    {"程序", Token(TokenKind::Program, "program", 0, 0, "")},
+    // 控制流
+    {"如果", Token(TokenKind::If, "if", 0, 0, "")},
+    {"否则", Token(TokenKind::Else, "else", 0, 0, "")},
+    {"当", Token(TokenKind::While, "while", 0, 0, "")},
+    {"循环", Token(TokenKind::While, "while", 0, 0, "")},
+    {"跳出", Token(TokenKind::Break, "break", 0, 0, "")},
+    {"继续", Token(TokenKind::Continue, "continue", 0, 0, "")},
+    {"返回", Token(TokenKind::Return, "return", 0, 0, "")},
+    {"对于", Token(TokenKind::For, "for", 0, 0, "")},
+    // 字面量
+    {"空", Token(TokenKind::None, "null", 0, 0, "")},
+    {"真", Token(TokenKind::True, "true", 0, 0, "")},
+    {"假", Token(TokenKind::False, "false", 0, 0, "")},
+    // 声明
+    {"函数", Token(TokenKind::Function, "func", 0, 0, "")},
+    {"类", Token(TokenKind::Class, "class", 0, 0, "")},
+    {"静态", Token(TokenKind::Static, "static", 0, 0, "")},
+    {"全局", Token(TokenKind::Global, "global", 0, 0, "")},
+    // 类型
+    {"整数", Token(TokenKind::Id, "int", 0, 0, "")},
+    {"实数", Token(TokenKind::Id, "float", 0, 0, "")},
+    {"字符串", Token(TokenKind::Id, "string", 0, 0, "")},
+    // 内置函数
+    {"打印", Token(TokenKind::Builtin, "print", 0, 0, "")},
+    {"输出", Token(TokenKind::Builtin, "print", 0, 0, "")},
+    {"sprintf", Token(TokenKind::Builtin, "sprintf", 0, 0, "")},
+    {"printf", Token(TokenKind::Builtin, "printf", 0, 0, "")},
+
+    {std::string(kGlobalDictName), Token(TokenKind::Builtin, std::string(kGlobalDictName), 0, 0, "")},
+    {std::string(kArgvArrayName), Token(TokenKind::Builtin, std::string(kArgvArrayName), 0, 0, "")},
+    {"_input", Token(TokenKind::Builtin, "_input", 0, 0, "")},
+    {"_getargv", Token(TokenKind::Builtin, "_getargv", 0, 0, "")},
+    {"_copy", Token(TokenKind::Builtin, "_copy", 0, 0, "")},
+
+    {"_len", Token(TokenKind::Builtin, "_len", 0, 0, "")},
+    {"_str", Token(TokenKind::Builtin, "_str", 0, 0, "")},
+    {"_int", Token(TokenKind::Builtin, "_int", 0, 0, "")},
+    {"_float", Token(TokenKind::Builtin, "_float", 0, 0, "")},
+    {"_type", Token(TokenKind::Builtin, "_type", 0, 0, "")},
+    {"_fun", Token(TokenKind::Builtin, "_fun", 0, 0, "")},
+
+    // 英文关键字（中文模式也支持）
     {"program",  Token(TokenKind::Program, "program", 0, 0, "")},
+    {"main",  Token(TokenKind::Id, "main", 0, 0, "")},
     {"if", Token(TokenKind::If, "if", 0, 0, "")},
     {"else", Token(TokenKind::Else, "else", 0, 0, "")},
     {"while", Token(TokenKind::While, "while", 0, 0, "")},
@@ -69,19 +113,9 @@ static std::map<std::string, Token> chineseKeywordMap =
     {"print", Token(TokenKind::Builtin, "print", 0, 0, "")},
     {"sprintf", Token(TokenKind::Builtin, "sprintf", 0, 0, "")},
     {"printf", Token(TokenKind::Builtin, "printf", 0, 0, "")},
-
-    {std::string(kGlobalDictName), Token(TokenKind::Builtin, std::string(kGlobalDictName), 0, 0, "")},
-    {std::string(kArgvArrayName), Token(TokenKind::Builtin, std::string(kArgvArrayName), 0, 0, "")},
-    {"_input", Token(TokenKind::Builtin, "_input", 0, 0, "")},
-    {"_getargv", Token(TokenKind::Builtin, "_getargv", 0, 0, "")},
-    {"_copy", Token(TokenKind::Builtin, "_copy", 0, 0, "")},
-
-    {"_len", Token(TokenKind::Builtin, "_len", 0, 0, "")},
-    {"_str", Token(TokenKind::Builtin, "_str", 0, 0, "")},
-    {"_int", Token(TokenKind::Builtin, "_int", 0, 0, "")},
-    {"_float", Token(TokenKind::Builtin, "_float", 0, 0, "")},
-    {"_type", Token(TokenKind::Builtin, "_type", 0, 0, "")},
-    {"_fun", Token(TokenKind::Builtin, "_fun", 0, 0, "")}
+    {"int", Token(TokenKind::Id, "int", 0, 0, "")},
+    {"float", Token(TokenKind::Id, "float", 0, 0, "")},
+    {"string", Token(TokenKind::Id, "string", 0, 0, "")}
 };
 
 // 合并后的完整关键字查找表

@@ -42,51 +42,51 @@ void Interpreter::formattedPrint(const char* format, ...)
 
 void Interpreter::warning(const string& warn, const Token& token)
 {
-	char fileinfo[512];
-	char buff[512];
-	sprintf(fileinfo, 
-			"%s:%d:%d: ", 
-			token.filename().c_str(), 
-			token.lineNo(), 
-			token.column()
-			);
-	formattedPrint("%s", fileinfo);
-
-	printf("warning: ");
-
-	sprintf(buff, 
-			"%s: %s\r\n", 
-			warn.c_str(), 
-			token.value().c_str()
-			);
-	formattedPrint("%s", buff);
-	
-	m_error = buff;
+    char fileinfo[512];
+    char buff[512];
+    sprintf(fileinfo,
+            "%s:%d:%d: ",
+            token.filename().c_str(),
+            token.lineNo(),
+            token.column()
+            );
+    formattedPrint("%s", fileinfo);
+    
+    printf("Runtime warning: ");
+    
+    sprintf(buff,
+            "%s: %s\r\n",
+            warn.c_str(),
+            token.value().c_str()
+            );
+    formattedPrint("%s", buff);
+    
+    m_error = buff;
 }
 
 // 报告运行时错误
 void Interpreter::error(const string& err, const Token& token)
 {
-	char fileinfo[512];
-	char buff[512];
-	sprintf(fileinfo, 
-			"%s:%d:%d: ", 
-			token.filename().c_str(), 
-			token.lineNo(), 
-			token.column()
-			);
-	formattedPrint("%s", fileinfo);
-
-	printf("error: ");
-
-	sprintf(buff, 
-			"%s: %s\r\n", 
-			err.c_str(), 
-			token.value().c_str()
-			);
-	formattedPrint("%s", buff);
-	
-	m_error = buff;
+    char fileinfo[512];
+    char buff[512];
+    sprintf(fileinfo,
+            "%s:%d:%d: ",
+            token.filename().c_str(),
+            token.lineNo(),
+            token.column()
+            );
+    formattedPrint("%s", fileinfo);
+    
+    printf("Runtime error: ");
+    
+    sprintf(buff,
+            "%s: %s\r\n",
+            err.c_str(),
+            token.value().c_str()
+            );
+    formattedPrint("%s", buff);
+    
+    m_error = buff;
 }
 
 // --- 核心执行 ---

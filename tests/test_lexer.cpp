@@ -1,13 +1,27 @@
 // Copyright (c) 2023-2026 Lily King.
 #include "loong/lexer.hpp"
 #include <iostream>
+#include <fstream>
 
 using namespace loong;
 
-int main() {
-    std::string testCode = "print(\"Hi\");";
+int main(int argc, char* argv[]) {
+    if (argc < 2) {
+        std::cerr << "Usage: test_lexer <file>" << std::endl;
+        return 1;
+    }
+    
+    std::ifstream file(argv[1]);
+    if (!file.is_open()) {
+        std::cerr << "Cannot open file: " << argv[1] << std::endl;
+        return 1;
+    }
+    
+    std::string testCode((std::istreambuf_iterator<char>(file)),
+                         std::istreambuf_iterator<char>());
+    file.close();
 
-    Lexer lexer(testCode, "test.lo");
+    Lexer lexer(testCode, argv[1]);
 
     std::cout << "Lexer results:" << std::endl;
     std::cout << "Token count: " << lexer.tokenCount() << std::endl;

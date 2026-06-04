@@ -51,7 +51,7 @@ void Lexer::error(const string& message)
 // 将读取位置向前推进一个字符，更新行号和列号
 void Lexer::advance()
 {
-    if (m_curChar == '\n')
+if (m_curChar == '\n')
     {
         m_lineNo += 1;
         m_column = 0;
@@ -138,11 +138,13 @@ Token Lexer::id()
     string result;
     while (m_curChar != 0)
     {
-        if (m_curChar >= 'a' && m_curChar <= 'z'
-            || m_curChar >= 'A' && m_curChar <= 'Z'
-            || m_curChar >= '0' && m_curChar <= '9'
+        // 支持ASCII字母、数字、下划线、$ 以及UTF-8多字节字符（中文等）
+        if ((m_curChar >= 'a' && m_curChar <= 'z')
+            || (m_curChar >= 'A' && m_curChar <= 'Z')
+            || (m_curChar >= '0' && m_curChar <= '9')
             || m_curChar == '_'
-            || m_curChar == '$')
+            || m_curChar == '$'
+            || (static_cast<unsigned char>(m_curChar) > 127))
             result += m_curChar;
         else
             break;
@@ -461,9 +463,10 @@ Token Lexer::getNextToken()
         advance();
         return str();
     }
-    if (m_curChar >= 'a' && m_curChar <= 'z'
-        || m_curChar >= 'A' && m_curChar <= 'Z'
-        || m_curChar == '_' || m_curChar == '$')
+    if ((m_curChar >= 'a' && m_curChar <= 'z')
+        || (m_curChar >= 'A' && m_curChar <= 'Z')
+        || m_curChar == '_' || m_curChar == '$'
+        || (static_cast<unsigned char>(m_curChar) > 127))
         return id();
     if (m_curChar >= '0' && m_curChar <= '9')
         return number();
