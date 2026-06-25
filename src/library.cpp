@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <regex>
 #include <math.h>
+#include <set>
 
 #include "loong/library.hpp"
 #include "loong/interpreter.hpp"
@@ -1574,6 +1575,325 @@ bool Func::callFunc(const vector<Variable>& args, Variable& ret)
 	if (it != dispatch.end())
 		return it->second(args, ret);
 	return false;
+}
+
+// --- URL 编码/解码 ---
+
+// 标准 URL 百分比编码
+string Tool::urlEscape(const string& url)
+{
+	string escaped;
+	for (unsigned char c : url)
+	{
+		if (isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~')
+			escaped += c;
+		else
+		{
+			char buf[4];
+			snprintf(buf, sizeof(buf), "%%%02X", c);
+			escaped += buf;
+		}
+	}
+	return escaped;
+}
+
+// URL 百分比解码
+string Tool::urlUnescape(const string& url)
+{
+	string unescaped;
+	for (size_t i = 0; i < url.size(); ++i)
+	{
+		if (url[i] == '%' && i + 2 < url.size())
+		{
+			int val;
+			sscanf(url.c_str() + i + 1, "%2X", &val);
+			unescaped += (char)val;
+			i += 2;
+		}
+		else if (url[i] == '+')
+			unescaped += ' ';
+		else
+			unescaped += url[i];
+	}
+	return unescaped;
+}
+
+// --- 动态库加载 ---
+
+// 加载动态库
+void* Dll::loadLibrary(const string& filename)
+{
+#ifdef _WIN32
+	// Windows: 将字符串转换为宽字符
+	int size = MultiByteToWideChar(CP_UTF8, 0, filename.c_str(), -1, nullptr, 0);
+	wchar_t* wfilename = new wchar_t[size];
+	MultiByteToWideChar(CP_UTF8, 0, filename.c_str(), -1, wfilename, size);
+	void* handle = (void*)LoadLibraryW(wfilename);
+	delete[] wfilename;
+	return handle;
+#else
+	return dlopen(filename.c_str(), RTLD_LAZY);
+#endif
+}
+
+// 卸载动态库
+void Dll::freeLibrary(void* handle)
+{
+	if (!handle) return;
+#ifdef _WIN32
+	FreeLibrary((HMODULE)handle);
+#else
+	dlclose(handle);
+#endif
+}
+
+// 调用动态库中的函数
+bool Dll::callLibrary(const vector<Variable>& args, Variable& result)
+{
+	if (args.size() < 3) return false;
+	void* handle = args[1].pointerValue();
+	string funcName = args[2].stringValue();
+	if (!handle || funcName.empty()) return false;
+
+#ifdef _WIN32
+	using FuncPtr = int(*)();
+	FuncPtr func = (FuncPtr)GetProcAddress((HMODULE)handle, funcName.c_str());
+#else
+	using FuncPtr = int(*)();
+	FuncPtr func = (FuncPtr)dlsym(handle, funcName.c_str());
+#endif
+	if (!func) return false;
+
+	int ret = func();
+	result = Variable((Int)ret);
+	return true;
+}
+
+// --- 数学函数 ---
+
+// 数学函数分派（abs/sqrt/pow/sin/cos/tan/floor/ceil/log/log10）
+bool Func::mathFunc(const vector<Variable>& args, Variable& result)
+{
+	if (args.size() < 1) return false;
+	string name = args[0].stringValue();
+
+	if (name == "math_abs")
+	{
+		if (args.size() != 2) return false;
+		if (args[1].type() == Variable::VarType::Int)
+			result = Variable(abs(args[1].intValue()));
+		else if (args[1].type() == Variable::VarType::Float)
+			result = Variable(fabs(args[1].floatValue()));
+		return true;
+	}
+	if (name == "math_sqrt")
+	{
+		if (args.size() != 2) return false;
+		double val = args[1].type() == Variable::VarType::Int ? (double)args[1].intValue() : args[1].floatValue();
+		result = Variable(sqrt(val));
+		return true;
+	}
+	if (name == "math_pow")
+	{
+		if (args.size() != 3) return false;
+		double base = args[1].type() == Variable::VarType::Int ? (double)args[1].intValue() : args[1].floatValue();
+		double exp = args[2].type() == Variable::VarType::Int ? (double)args[2].intValue() : args[2].floatValue();
+		result = Variable(pow(base, exp));
+		return true;
+	}
+	if (name == "math_sin")
+	{
+		if (args.size() != 2) return false;
+		double val = args[1].type() == Variable::VarType::Int ? (double)args[1].intValue() : args[1].floatValue();
+		result = Variable(sin(val));
+		return true;
+	}
+	if (name == "math_cos")
+	{
+		if (args.size() != 2) return false;
+		double val = args[1].type() == Variable::VarType::Int ? (double)args[1].intValue() : args[1].floatValue();
+		result = Variable(cos(val));
+		return true;
+	}
+	if (name == "math_tan")
+	{
+		if (args.size() != 2) return false;
+		double val = args[1].type() == Variable::VarType::Int ? (double)args[1].intValue() : args[1].floatValue();
+		result = Variable(tan(val));
+		return true;
+	}
+	if (name == "math_floor")
+	{
+		if (args.size() != 2) return false;
+		double val = args[1].type() == Variable::VarType::Int ? (double)args[1].intValue() : args[1].floatValue();
+		result = Variable((Int)floor(val));
+		return true;
+	}
+	if (name == "math_ceil")
+	{
+		if (args.size() != 2) return false;
+		double val = args[1].type() == Variable::VarType::Int ? (double)args[1].intValue() : args[1].floatValue();
+		result = Variable((Int)ceil(val));
+		return true;
+	}
+	if (name == "math_log")
+	{
+		if (args.size() != 2) return false;
+		double val = args[1].type() == Variable::VarType::Int ? (double)args[1].intValue() : args[1].floatValue();
+		result = Variable(log(val));
+		return true;
+	}
+	if (name == "math_log10")
+	{
+		if (args.size() != 2) return false;
+		double val = args[1].type() == Variable::VarType::Int ? (double)args[1].intValue() : args[1].floatValue();
+		result = Variable(log10(val));
+		return true;
+	}
+
+	return false;
+}
+
+// --- 正则表达式函数 ---
+
+// 正则表达式函数分派（match/search/replace）
+bool Func::regexFunc(const vector<Variable>& args, Variable& result)
+{
+	if (args.size() < 1) return false;
+	string name = args[0].stringValue();
+
+	if (name == "regex_match")
+	{
+		if (args.size() != 3) return false;
+		string text = args[1].stringValue();
+		string pattern = args[2].stringValue();
+		try
+		{
+			regex re(pattern);
+			result = Variable(regex_match(text, re) ? 1 : 0);
+		}
+		catch (...)
+		{
+			result = Variable(0);
+		}
+		return true;
+	}
+	if (name == "regex_search")
+	{
+		if (args.size() != 3) return false;
+		string text = args[1].stringValue();
+		string pattern = args[2].stringValue();
+		try
+		{
+			regex re(pattern);
+			smatch match;
+			if (regex_search(text, match, re))
+				result = Variable(match[0].str());
+		}
+		catch (...)
+		{
+		}
+		return true;
+	}
+	if (name == "regex_replace")
+	{
+		if (args.size() != 4) return false;
+		string text = args[1].stringValue();
+		string pattern = args[2].stringValue();
+		string replacement = args[3].stringValue();
+		try
+		{
+			regex re(pattern);
+			result = Variable(regex_replace(text, re, replacement));
+		}
+		catch (...)
+		{
+			result = Variable(text);
+		}
+		return true;
+	}
+
+	return false;
+}
+
+// --- 集合操作函数 ---
+
+// 集合操作分派（union/intersection/difference）
+bool Func::setFunc(const vector<Variable>& args, Variable& result)
+{
+	if (args.size() < 1) return false;
+	string name = args[0].stringValue();
+
+	if (name == "set_union")
+	{
+		if (args.size() != 3) return false;
+		if (args[1].type() != Variable::VarType::Array || args[2].type() != Variable::VarType::Array)
+			return false;
+
+		set<Variable> setA, setB;
+		for (auto& v : *args[1].arrayValue()) setA.insert(v);
+		for (auto& v : *args[2].arrayValue()) setB.insert(v);
+
+		vector<Variable> unionSet(setA.begin(), setA.end());
+		for (auto& v : setB)
+		{
+			if (setA.find(v) == setA.end())
+				unionSet.push_back(v);
+		}
+
+		result.setArray(0);
+		for (auto& v : unionSet)
+			result.arrayValue()->push_back(v);
+		return true;
+	}
+	if (name == "set_intersection")
+	{
+		if (args.size() != 3) return false;
+		if (args[1].type() != Variable::VarType::Array || args[2].type() != Variable::VarType::Array)
+			return false;
+
+		set<Variable> setA;
+		for (auto& v : *args[1].arrayValue()) setA.insert(v);
+
+		result.setArray(0);
+		for (auto& v : *args[2].arrayValue())
+		{
+			if (setA.find(v) != setA.end())
+				result.arrayValue()->push_back(v);
+		}
+		return true;
+	}
+	if (name == "set_difference")
+	{
+		if (args.size() != 3) return false;
+		if (args[1].type() != Variable::VarType::Array || args[2].type() != Variable::VarType::Array)
+			return false;
+
+		set<Variable> setB;
+		for (auto& v : *args[2].arrayValue()) setB.insert(v);
+
+		result.setArray(0);
+		for (auto& v : *args[1].arrayValue())
+		{
+			if (setB.find(v) == setB.end())
+				result.arrayValue()->push_back(v);
+		}
+		return true;
+	}
+
+	return false;
+}
+
+// --- 动态代码执行 ---
+
+// 执行代码字符串
+bool Func::runCode(const string& code, const vector<Variable>& args, Variable& ret, const string& filename)
+{
+	Variable globalValue;
+	if (args.size() > 0 && args[0].type() == Variable::VarType::Dict)
+		globalValue = args[0];
+	ret = Tool::interpreter(code, "", args, globalValue, filename);
+	return true;
 }
 
 } // namespace loong
